@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0f20">
+  <title>TIGER MasterClass — Вход</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐯</text></svg>">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+  <main class="login-screen">
+    <div class="login-card">
+      <div class="row" style="justify-content:center; margin-bottom:var(--space-4)">
+        <div data-lang-switch></div>
+      </div>
+
+      <div class="login-logo">🐯</div>
+      <h1 class="login-title" data-i18n="app.name">TIGER MasterClass</h1>
+      <p class="login-sub" data-i18n="login.subtitle">Введите логин и пароль</p>
+
+      <form id="login-form" novalidate>
+        <div class="field">
+          <label class="field__label" for="login-input" data-i18n="login.login">Логин</label>
+          <input id="login-input" class="input" type="text" name="login"
+                 autocomplete="username" autocapitalize="none" spellcheck="false"
+                 data-i18n-ph="login.login_ph" required>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="password-input" data-i18n="login.password">Пароль</label>
+          <input id="password-input" class="input" type="password" name="password"
+                 autocomplete="current-password" data-i18n-ph="login.password_ph" required>
+          <label class="row" style="gap:8px; font-size:.85rem; color:var(--clr-muted)">
+            <input type="checkbox" id="toggle-password" style="width:20px;height:20px">
+            <span data-i18n="login.show_password">Показать пароль</span>
+          </label>
+        </div>
+
+        <div id="login-error" class="badge badge--danger hidden" style="width:100%; justify-content:center; padding:10px"></div>
+
+        <button type="submit" id="login-submit" class="btn btn--primary btn--block">
+          <span data-i18n="login.submit">Войти</span>
+        </button>
+      </form>
+
+      <p class="login-footer" data-i18n="login.hint">Роль определяется автоматически по логину</p>
+    </div>
+  </main>
+
+  <script type="module" src="/js/login.js"></script>
+</body>
+</html>

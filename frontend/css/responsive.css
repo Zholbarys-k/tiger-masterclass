@@ -1,0 +1,113 @@
+/* TIGER MasterClass — адаптивность: планшет и ПК (mobile-first базы выше) */
+
+/* ---------- Планшеты ---------- */
+@media (min-width: 640px) {
+  .app-header { padding: var(--space-3) var(--space-5); }
+  .brand__logo { width: 44px; height: 44px; flex-basis: 44px; font-size: 26px; }
+  .brand__title { font-size: 1.1rem; }
+  .brand__sub { max-width: 40vw; }
+  .app-main { padding: var(--space-5); }
+  .grid--auto { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .nav-btn { font-size: 0.75rem; }
+  .board-row { grid-template-columns: 52px 1fr auto; }
+  .media-item img, .media-item video { height: 150px; }
+}
+
+/* ---------- Ноутбуки и ПК: боковое меню ---------- */
+@media (min-width: 1024px) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: 248px 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "sidebar header"
+      "sidebar main";
+    padding-bottom: 0;
+    min-height: 100vh;
+  }
+
+  .app-header {
+    grid-area: header;
+    padding: var(--space-3) var(--space-6);
+  }
+
+  .app-main {
+    grid-area: main;
+    padding: var(--space-6);
+    max-width: none;
+  }
+  .app-main > .page { max-width: var(--content-max); margin: 0 auto; }
+
+  /* Нижняя навигация превращается в боковое меню */
+  .bottom-nav {
+    grid-area: sidebar;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-5) var(--space-3);
+    border-top: 0;
+    border-right: 1px solid var(--clr-border);
+    background: rgba(9, 13, 28, 0.72);
+  }
+  .bottom-nav::before {
+    content: "🐯 TIGER";
+    display: block;
+    padding: 0 var(--space-3) var(--space-4);
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--clr-accent);
+  }
+  .nav-btn {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    min-height: 50px;
+    padding: 0 var(--space-3);
+    font-size: 0.95rem;
+    border-radius: var(--radius-sm);
+  }
+  .nav-btn__label { text-align: left; }
+  .nav-btn__icon { font-size: 1.2rem; }
+
+  .toasts { left: auto; right: var(--space-5); transform: none; bottom: var(--space-5); }
+
+  .grid--auto { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .table { min-width: 0; }
+  .board-row { grid-template-columns: 60px 1fr 160px; padding: var(--space-4); }
+}
+
+@media (min-width: 1440px) {
+  :root { --content-max: 1320px; }
+}
+
+/* ---------- Мелкие телефоны ---------- */
+@media (max-width: 380px) {
+  .nav-btn__label { font-size: 0.6rem; }
+  .app-main { padding: var(--space-3); }
+  .card { padding: var(--space-3); }
+  .brand__sub { display: none; }
+  .board-row { grid-template-columns: 36px 1fr auto; gap: var(--space-2); }
+  .board-row__points { font-size: 1.1rem; }
+}
+
+/* ---------- Печать ---------- */
+@media print {
+  .bottom-nav, .app-header, .toasts, .btn { display: none !important; }
+  body { background: #fff; color: #000; }
+  .card, .board-row { border-color: #ccc; box-shadow: none; }
+}
+
+/* ---------- Уважение к настройкам движения ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0f20">
+  <title>TIGER MasterClass — Admin</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐯</text></svg>">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <style>
+    /* Панель админа не использует нижнюю навигацию */
+    .app-shell { padding-bottom: var(--space-6); }
+    @media (min-width: 1024px) {
+      .app-shell { grid-template-columns: 1fr; grid-template-areas: "header" "main"; }
+      .app-main { grid-area: main; }
+    }
+    .toasts { bottom: var(--space-4); }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand grow">
+        <div class="brand__logo">🛠️</div>
+        <div class="brand__text">
+          <div class="brand__title" data-i18n="admin.title">Панель администратора</div>
+          <div class="brand__sub" id="header-user">—</div>
+        </div>
+      </div>
+      <div data-lang-switch></div>
+      <button type="button" class="btn btn--ghost btn--sm" id="logout-btn">
+        🚪 <span data-i18n="nav.logout">Выход</span>
+      </button>
+    </header>
+
+    <main class="app-main">
+      <nav class="tabs" id="admin-tabs">
+        <button type="button" class="tab" data-tab="overview" data-i18n="admin.tab.overview">Обзор</button>
+        <button type="button" class="tab" data-tab="teams" data-i18n="admin.tab.teams">Команды</button>
+        <button type="button" class="tab" data-tab="tasks" data-i18n="admin.tab.tasks">Задания</button>
+        <button type="button" class="tab" data-tab="quiz" data-i18n="admin.tab.quiz">Тест</button>
+        <button type="button" class="tab" data-tab="submissions" data-i18n="admin.tab.submissions">Ответы</button>
+        <button type="button" class="tab" data-tab="votes" data-i18n="admin.tab.votes">Голоса</button>
+        <button type="button" class="tab" data-tab="rating" data-i18n="admin.tab.rating">Рейтинг</button>
+      </nav>
+
+      <section id="admin-content" style="margin-top:var(--space-4)"></section>
+    </main>
+  </div>
+
+  <script type="module" src="/js/admin.js"></script>
+</body>
+</html>

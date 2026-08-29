@@ -1,0 +1,19 @@
+# Конфигурация Apache для виртуального хостинга Timeweb (mod_wsgi).
+# Все запросы, кроме реально существующих файлов, уходят в index.wsgi (Flask).
+
+Options +ExecCGI
+AddHandler wsgi-script .wsgi
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ /index.wsgi/$1 [QSA,PT,L]
+
+# Закрываем доступ к служебным файлам и папкам
+<FilesMatch "\.(py|db|sqlite3?|log|bat|md)$">
+    Require all denied
+</FilesMatch>
+
+RedirectMatch 404 ^/(data|credentials|backend|scripts)/
+
+# Лимит на размер загружаемого файла: 16 МБ (видео и фото до 15 МБ)
+LimitRequestBody 16777216

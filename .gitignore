@@ -1,0 +1,25 @@
+# Данные и загрузки
+data/*.db
+data/*.db-journal
+uploads/*
+!uploads/.gitkeep
+
+# Логины и пароли участников — не публиковать
+credentials/credentials.txt
+credentials/credentials.csv
+credentials/team_cards.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# ОС и редакторы
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
