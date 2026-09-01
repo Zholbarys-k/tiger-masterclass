@@ -13,14 +13,23 @@
 <body>
   <div class="app-shell">
     <header class="app-header">
-      <div class="brand grow">
+      <button type="button" class="brand grow header-profile" id="profile-btn" aria-label="Профиль">
         <div class="brand__logo">🐯</div>
         <div class="brand__text">
           <div class="brand__title" id="header-team">TIGER</div>
           <div class="brand__sub" id="header-user">—</div>
         </div>
+      </button>
+      <div class="header-actions">
+        <button type="button" class="icon-btn" id="messages-btn" data-i18n-aria="messages.title">
+          <span aria-hidden="true">💬</span>
+          <span class="icon-btn__badge" id="msg-badge" hidden></span>
+        </button>
+        <div data-lang-switch></div>
+        <button type="button" class="btn btn--ghost btn--sm" id="logout-btn">
+          🚪 <span data-i18n="nav.logout">Выход</span>
+        </button>
       </div>
-      <div data-lang-switch></div>
     </header>
 
     <main class="app-main">
@@ -29,6 +38,7 @@
       <section class="page" id="page-voting" data-view="voting"></section>
       <section class="page" id="page-rating" data-view="leaderboard"></section>
       <section class="page" id="page-team" data-view="team"></section>
+      <section class="page" id="page-messages" data-view="messages"></section>
     </main>
 
     <nav class="bottom-nav" id="bottom-nav">
@@ -51,10 +61,6 @@
       <button type="button" class="nav-btn" data-nav="team">
         <span class="nav-btn__icon">👥</span>
         <span class="nav-btn__label" data-i18n="nav.team">Команда</span>
-      </button>
-      <button type="button" class="nav-btn" data-nav="logout">
-        <span class="nav-btn__icon">🚪</span>
-        <span class="nav-btn__label" data-i18n="nav.logout">Выход</span>
       </button>
     </nav>
   </div>

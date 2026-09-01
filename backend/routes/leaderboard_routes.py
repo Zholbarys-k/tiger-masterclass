@@ -60,8 +60,20 @@ def leaderboard():
 @bp.get("/state")
 @require_auth
 def state():
-    """Лёгкий эндпоинт опроса: версии разделов + серверное время."""
+    """Лёгкий эндпоинт опроса: версии разделов + серверное время.
+
+    Здесь же двигаем расписание теста: этот запрос делают все клиенты, поэтому
+    смена вопроса происходит вовремя и без фонового планировщика.
+    """
+    from ..quiz_engine import ensure_progress, get_quiz
+    from ..task3_engine import ensure_progress as ensure_task_rounds
+
+    from ..routes.message_routes import unread_count_for
+
+    ensure_progress(get_quiz())
+    ensure_task_rounds()
     return json_ok(
         versions=current_versions(),
+        unread_messages=unread_count_for(g.user),
         server_time=datetime.now(timezone.utc).isoformat(),
     )

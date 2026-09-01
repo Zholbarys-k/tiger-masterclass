@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, current_app, g, request
 
+from .. import quiz_engine
 from ..auth import require_role
 from ..db import db
 from ..models import (
@@ -10,13 +11,14 @@ from ..models import (
     ROLE_LEADER,
     ROLE_MEMBER,
     Attachment,
-    Question,
+    ProjectVote,
     Quiz,
     QuizAnswer,
     ScoreAdjustment,
     Section,
     Submission,
     Task,
+    TaskRound,
     Team,
     User,
     Vote,
@@ -38,6 +40,7 @@ def overview():
     lang = current_lang()
     teams = db.session.query(Team).all()
     quiz = db.session.query(Quiz).order_by(Quiz.id).first()
+    quiz_engine.ensure_progress(quiz)
     active_teams = [t for t in teams if t.has_activity]
     return json_ok(
         stats={
@@ -233,6 +236,26 @@ def adjustments(team_id: int):
     return json_ok(adjustments=[r.to_dict() for r in rows])
 
 
+@bp.post("/scores/reset")
+@admin_only
+def reset_all_scores():
+    """Обнулить рейтинг: баллы за задания, ответы теста и ручные правки."""
+    now = utcnow()
+    submissions = db.session.query(Submission).all()
+    for submission in submissions:
+        submission.points = 0
+        submission.updated_at = now
+    quiz_deleted = db.session.query(QuizAnswer).delete()
+    bonus_deleted = db.session.query(ScoreAdjustment).delete()
+    bump("leaderboard", "teams", "quiz", "submissions")
+    db.session.commit()
+    return json_ok(
+        submissions_zeroed=len(submissions),
+        quiz_answers_deleted=quiz_deleted,
+        adjustments_deleted=bonus_deleted,
+    )
+
+
 @bp.patch("/submissions/<int:submission_id>/points")
 @admin_only
 def set_submission_points(submission_id: int):
@@ -268,6 +291,57 @@ def all_submissions():
     return json_ok(submissions=[r.to_dict(lang) for r in rows])
 
 
+def _remove_submission_files(submission: Submission) -> None:
+    """Удалить папку с фото/видео этого ответа."""
+    folder = current_app.config["UPLOAD_DIR"] / str(submission.id)
+    if not folder.exists():
+        return
+    for path in folder.iterdir():
+        path.unlink(missing_ok=True)
+    folder.rmdir()
+
+
+@bp.delete("/submissions/<int:submission_id>")
+@admin_only
+def delete_submission(submission_id: int):
+    """Удалить один ответ команды вместе с файлами (баллы за него снимаются)."""
+    submission = db.session.get(Submission, submission_id)
+    if submission is None:
+        return json_err("not_found", "Ответ не найден", 404)
+    _remove_submission_files(submission)
+    db.session.delete(submission)
+    bump("submissions", "leaderboard", "tasks")
+    db.session.commit()
+    return json_ok(deleted=1)
+
+
+@bp.post("/submissions/reset")
+@admin_only
+def reset_submissions():
+    """Сброс ответов: всех сразу или только по заданию / команде."""
+    data = request.get_json(silent=True) or {}
+    query = db.session.query(Submission)
+    if data.get("task_id"):
+        query = query.filter_by(task_id=as_int(data["task_id"]))
+    if data.get("team_id"):
+        query = query.filter_by(team_id=as_int(data["team_id"]))
+
+    rows = query.all()
+    for submission in rows:
+        _remove_submission_files(submission)
+        db.session.delete(submission)
+
+    if not data.get("task_id") and not data.get("team_id"):
+        db.session.query(ProjectVote).delete()
+        from ..task3_engine import reset_all_rounds
+
+        reset_all_rounds()
+
+    bump("submissions", "leaderboard", "tasks", "task3", "votes")
+    db.session.commit()
+    return json_ok(deleted=len(rows))
+
+
 # --------------------------------------------------------------------------- #
 # Задания
 # --------------------------------------------------------------------------- #
@@ -297,8 +371,11 @@ def create_task():
         **titles, **bodies,
     )
     db.session.add(task)
-    bump("tasks")
+    bump("tasks", "task3")
     db.session.commit()
+    from ..task3_engine import ensure_rounds
+
+    ensure_rounds()
     return json_ok(task=task.to_dict(current_lang(), full=True))
 
 
@@ -334,57 +411,127 @@ def delete_task(task_id: int):
     task = db.session.get(Task, task_id)
     if task is None:
         return json_err("not_found", "Задание не найдено", 404)
-    upload_root = current_app.config["UPLOAD_DIR"]
+    db.session.query(ProjectVote).filter_by(task_id=task_id).delete()
+    db.session.query(TaskRound).filter_by(task_id=task_id).delete()
     for submission in task.submissions:
-        folder = upload_root / str(submission.id)
-        if folder.exists():
-            for path in folder.iterdir():
-                path.unlink(missing_ok=True)
-            folder.rmdir()
+        _remove_submission_files(submission)
     db.session.delete(task)
-    bump("tasks", "leaderboard", "submissions")
+    bump("tasks", "leaderboard", "submissions", "task3", "votes")
     db.session.commit()
     return json_ok()
 
 
 # --------------------------------------------------------------------------- #
-# Тест
+# Тест: пульт управления в реальном времени
 # --------------------------------------------------------------------------- #
 @bp.post("/quiz/toggle")
 @admin_only
 def toggle_quiz():
-    quiz = db.session.query(Quiz).order_by(Quiz.id).first()
+    """Открыть/закрыть тест для участников (без запуска вопросов)."""
+    quiz = quiz_engine.get_quiz()
     if quiz is None:
         return json_err("not_found", "Тест не найден", 404)
     data = request.get_json(silent=True) or {}
-    quiz.is_open = bool(data.get("is_open", not quiz.is_open))
     if "show_results" in data:
-        quiz.show_results = bool(data["show_results"])
-    if quiz.is_open:
-        quiz.opened_at = utcnow()
-        quiz.closed_at = None
+        quiz_engine.settings(quiz, {"show_results": data["show_results"]})
+    quiz_engine.set_open(quiz, bool(data.get("is_open", not quiz.is_open)))
+    return json_ok(quiz=quiz.to_dict(current_lang()))
+
+
+@bp.post("/quiz/control")
+@admin_only
+def control_quiz():
+    """Ход теста: start, reveal, next, prev, goto, extend, pause, resume, finish, reset."""
+    quiz = quiz_engine.get_quiz()
+    if quiz is None:
+        return json_err("not_found", "Тест не найден", 404)
+
+    data = request.get_json(silent=True) or {}
+    action = (data.get("action") or "").strip().lower()
+    quiz_engine.ensure_progress(quiz)
+
+    if action == "start":
+        if not quiz.questions:
+            return json_err("no_questions", "В тесте нет вопросов", 400)
+        if bool(data.get("reset_answers")):
+            db.session.query(QuizAnswer).delete()
+        quiz_engine.start(quiz, as_int(data.get("index"), 0))
+    elif action == "reveal":
+        quiz_engine.reveal(quiz)
+    elif action == "next":
+        quiz_engine.next_question(quiz)
+    elif action == "prev":
+        quiz_engine.prev_question(quiz)
+    elif action == "goto":
+        quiz_engine.goto(quiz, as_int(data.get("index"), quiz.current_index))
+    elif action == "extend":
+        quiz_engine.extend(quiz, as_int(data.get("seconds"), 15))
+    elif action == "pause":
+        quiz_engine.pause(quiz)
+    elif action == "resume":
+        quiz_engine.resume(quiz)
+    elif action == "finish":
+        quiz_engine.finish(quiz)
+    elif action == "reset":
+        quiz_engine.reset(quiz, clear_answers=bool(data.get("clear_answers", True)))
     else:
-        quiz.closed_at = utcnow()
-    bump("quiz")
-    db.session.commit()
+        return json_err("bad_action", "Неизвестное действие", 400)
+
+    return json_ok(quiz=quiz.to_dict(current_lang()))
+
+
+@bp.post("/quiz/settings")
+@admin_only
+def quiz_settings():
+    """Время на вопрос, время показа рейтинга, автопереход."""
+    quiz = quiz_engine.get_quiz()
+    if quiz is None:
+        return json_err("not_found", "Тест не найден", 404)
+    quiz_engine.settings(quiz, request.get_json(silent=True) or {})
     return json_ok(quiz=quiz.to_dict(current_lang()))
 
 
 @bp.post("/quiz/reset")
 @admin_only
 def reset_quiz():
-    """Удалить все ответы теста (баллы за тест обнуляются)."""
-    db.session.query(QuizAnswer).delete()
+    """Удалить все ответы теста и вернуть его в начало."""
+    quiz = quiz_engine.get_quiz()
+    if quiz is None:
+        db.session.query(QuizAnswer).delete()
+        bump("quiz", "leaderboard")
+        db.session.commit()
+        return json_ok()
+    quiz_engine.reset(quiz, clear_answers=True)
+    return json_ok(quiz=quiz.to_dict(current_lang()))
+
+
+@bp.post("/quiz/answers/reset")
+@admin_only
+def reset_quiz_answers():
+    """Сброс ответов теста: все, по одному вопросу или по одной команде.
+
+    Фаза и текущий вопрос не меняются — команды смогут ответить заново.
+    """
+    data = request.get_json(silent=True) or {}
+    query = db.session.query(QuizAnswer)
+    if data.get("question_id"):
+        query = query.filter_by(question_id=as_int(data["question_id"]))
+    if data.get("team_id"):
+        query = query.filter_by(team_id=as_int(data["team_id"]))
+
+    rows = query.all()
+    for row in rows:
+        db.session.delete(row)
     bump("quiz", "leaderboard")
     db.session.commit()
-    return json_ok()
+    return json_ok(deleted=len(rows))
 
 
 @bp.get("/quiz/questions")
 @admin_only
 def quiz_questions():
     lang = current_lang()
-    quiz = db.session.query(Quiz).order_by(Quiz.id).first()
+    quiz = quiz_engine.get_quiz()
     if quiz is None:
         return json_ok(questions=[])
     return json_ok(
@@ -419,5 +566,80 @@ def update_section(section_id: int):
 def reset_votes():
     db.session.query(Vote).delete()
     bump("votes")
+    db.session.commit()
+    return json_ok()
+
+
+# --------------------------------------------------------------------------- #
+# Пульты заданий №2, №3 и новых
+# --------------------------------------------------------------------------- #
+@bp.get("/rounds")
+@admin_only
+def rounds_state():
+    from ..task3_engine import ensure_progress, gallery_for, get_rounds
+
+    ensure_progress()
+    lang = current_lang()
+    items = []
+    for row in get_rounds():
+        gallery = gallery_for(row, lang, g.user, force=True)
+        items.append({
+            **gallery,
+            "submissions_count": len(row.task.submissions) if row.task else 0,
+        })
+    return json_ok(rounds=items)
+
+
+@bp.post("/rounds/<int:task_id>/control")
+@admin_only
+def control_round(task_id: int):
+    from .. import task3_engine
+
+    row = task3_engine.get_round(task_id)
+    if row is None:
+        return json_err("not_found", "Для этого задания нет пульта", 404)
+    task3_engine.ensure_progress(row)
+    data = request.get_json(silent=True) or {}
+    action = (data.get("action") or "").strip().lower()
+
+    if action == "start":
+        task3_engine.start(row)
+    elif action == "pause":
+        task3_engine.pause(row)
+    elif action == "resume":
+        task3_engine.resume(row)
+    elif action == "extend":
+        task3_engine.extend(row, as_int(data.get("seconds"), 300))
+    elif action == "finish":
+        task3_engine.finish(row)
+    elif action == "close":
+        task3_engine.close_voting(row)
+    elif action == "open":
+        task3_engine.open_voting(row)
+    elif action == "reset":
+        task3_engine.reset(row, clear_likes=bool(data.get("clear_likes", True)))
+    else:
+        return json_err("bad_action", "Неизвестное действие", 400)
+
+    return json_ok(round=row.to_dict())
+
+
+@bp.post("/rounds/<int:task_id>/settings")
+@admin_only
+def round_settings(task_id: int):
+    from .. import task3_engine
+
+    row = task3_engine.get_round(task_id)
+    if row is None:
+        return json_err("not_found", "Для этого задания нет пульта", 404)
+    task3_engine.settings(row, request.get_json(silent=True) or {})
+    return json_ok(round=row.to_dict())
+
+
+@bp.post("/projects/reset")
+@admin_only
+def reset_project_votes():
+    db.session.query(ProjectVote).delete()
+    bump("votes", "task3")
     db.session.commit()
     return json_ok()

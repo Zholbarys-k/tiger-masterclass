@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 import urllib.error
 import urllib.request
 import uuid
@@ -156,50 +157,118 @@ def main() -> None:
     status, files_member = call("GET", f"/api/files/{submission_id}/x", member_token)
     check("файл своей команды доступен участнику (404 на имя, не 403)", status == 404)
 
-    print("\n=== 4. Тест (15 вопросов) ===")
+    print("\n=== 4. Тест: один вопрос на всех, таймер, рейтинг ===")
+    call("POST", "/api/admin/quiz/toggle", admin_token, payload={"is_open": False})
     status, quiz = call("GET", "/api/quiz/state", leader_token)
-    check("тест изначально закрыт", quiz["quiz"]["is_open"] is False)
+    check("закрытый тест участникам недоступен",
+          quiz["quiz"]["is_open"] is False and quiz["quiz"]["phase"] == "idle")
 
     status, _ = call("POST", "/api/admin/quiz/toggle", admin_token, payload={"is_open": True})
     check("админ открыл тест", status == 200)
 
     status, quiz = call("GET", "/api/quiz/state", leader_token)
-    check("15 вопросов появились у лидера", len(quiz["questions"]) == 15)
-    check("лидер может отвечать", quiz["can_answer"] is True)
+    check("до старта вопросов не видно", quiz["quiz"]["phase"] == "idle" and quiz["question"] is None)
 
-    status, quiz_member = call("GET", "/api/quiz/state", member_token)
-    check("участник видит 15 вопросов", len(quiz_member["questions"]) == 15)
-    check("участник видит варианты ответов", len(quiz_member["questions"][0]["options"]) == 4)
-    check("участник не может отвечать", quiz_member["can_answer"] is False)
-    check("правильный ответ скрыт от участника", "correct_index" not in quiz_member["questions"][0])
+    status, settings = call("POST", "/api/admin/quiz/settings", admin_token,
+                            payload={"question_seconds": 5, "standings_seconds": 5,
+                                     "auto_advance": True})
+    check("админ изменил время на вопрос и на рейтинг",
+          status == 200 and settings["quiz"]["question_seconds"] == 5
+          and settings["quiz"]["standings_seconds"] == 5)
+
+    status, started = call("POST", "/api/admin/quiz/control", admin_token,
+                           payload={"action": "start", "reset_answers": True})
+    check("админ запустил тест", status == 200 and started["quiz"]["phase"] == "question")
 
     status, admin_q = call("GET", "/api/admin/quiz/questions", admin_token)
+    check("в тесте 15 вопросов", len(admin_q["questions"]) == 15)
     correct_map = {q["id"]: q["correct_index"] for q in admin_q["questions"]}
 
-    first = quiz["questions"][0]
+    status, q_leader = call("GET", "/api/quiz/state", leader_token)
+    status, q_member = call("GET", "/api/quiz/state", member_token)
+    check("выдаётся ровно один текущий вопрос", q_leader["question"]["number"] == 1)
+    check("у лидера и участника один и тот же вопрос",
+          q_leader["question"]["id"] == q_member["question"]["id"])
+    check("участник видит варианты ответов", len(q_member["question"]["options"]) == 4)
+    check("лидер может отвечать", q_leader["can_answer"] is True)
+    check("участник не может отвечать", q_member["can_answer"] is False)
+    check("правильный ответ скрыт до конца таймера", "correct_index" not in q_leader["question"])
+    check("таймер идёт", 0 < (q_leader["quiz"]["remaining_seconds"] or 0) <= 5,
+          str(q_leader["quiz"]["remaining_seconds"]))
+
+    first_id = q_leader["question"]["id"]
     status, answer = call("POST", "/api/quiz/answer", leader_token,
-                          payload={"question_id": first["id"], "selected_index": correct_map[first["id"]]})
-    check("лидер ответил верно и сразу получил результат",
-          status == 200 and answer["is_correct"] is True and answer["points"] > 0, str(answer)[:120])
-    check("баллы команды обновились сразу", answer["team_total"] >= answer["points"])
+                          payload={"question_id": first_id, "selected_index": correct_map[first_id]})
+    check("ответ лидера принят", status == 200 and answer.get("accepted") is True, str(answer)[:120])
+    check("результат не раскрывается до конца вопроса", "is_correct" not in answer)
 
     status, again = call("POST", "/api/quiz/answer", leader_token,
-                         payload={"question_id": first["id"], "selected_index": 0})
-    check("повторный ответ на вопрос отклонён", status == 400 and again.get("error") == "already_answered")
-
-    second = quiz["questions"][1]
-    wrong = (correct_map[second["id"]] + 1) % 4
-    status, answer2 = call("POST", "/api/quiz/answer", leader_token,
-                           payload={"question_id": second["id"], "selected_index": wrong})
-    check("неверный ответ даёт 0 баллов", status == 200 and answer2["is_correct"] is False and answer2["points"] == 0)
+                         payload={"question_id": first_id, "selected_index": 0})
+    check("повторный ответ отклонён", status == 400 and again.get("error") == "already_answered")
 
     status, denied = call("POST", "/api/quiz/answer", member_token,
-                          payload={"question_id": quiz["questions"][2]["id"], "selected_index": 0})
+                          payload={"question_id": first_id, "selected_index": 0})
     check("участник НЕ может отвечать на тест (403)", status == 403)
 
-    status, leader_state = call("GET", "/api/quiz/state", leader_token)
-    check("лидер видит правильный ответ после ответа", "correct_index" in leader_state["questions"][0])
-    check("прогресс лидера: 2 ответа", leader_state["my_progress"]["answered"] == 2)
+    status, waiting = call("GET", "/api/quiz/state", leader_token)
+    check("ответивший ждёт остальных", waiting["can_answer"] is False
+          and waiting["question"]["answered"] is True)
+
+    status, extended = call("POST", "/api/admin/quiz/control", admin_token,
+                            payload={"action": "extend", "seconds": 20})
+    check("админ добавил время на ходу", status == 200
+          and (extended["quiz"]["remaining_seconds"] or 0) > 5)
+
+    status, revealed = call("POST", "/api/admin/quiz/control", admin_token,
+                            payload={"action": "reveal"})
+    check("админ досрочно показал рейтинг", status == 200
+          and revealed["quiz"]["phase"] == "standings")
+
+    status, q_leader = call("GET", "/api/quiz/state", leader_token)
+    status, q_member = call("GET", "/api/quiz/state", member_token)
+    check("после таймера виден правильный ответ", "correct_index" in q_leader["question"])
+    check("участник тоже видит правильный ответ", "correct_index" in q_member["question"])
+    check("своя команда получила балл", q_leader["question"]["my_answer"]["is_correct"] is True)
+    check("между вопросами показано место команды",
+          q_leader["standings"]["my"]["rank"] == 1, str(q_leader["standings"])[:120])
+    check("видно, сколько команд ответило",
+          q_leader["question_stats"]["answered_teams"] == 1)
+
+    status, late = call("POST", "/api/quiz/answer", leader_token,
+                        payload={"question_id": first_id, "selected_index": 0})
+    check("вне фазы вопроса ответ отклонён", status == 409, str(late)[:120])
+
+    print("  ... ждём автоматический переход к следующему вопросу")
+    time.sleep(6)
+    status, auto = call("GET", "/api/quiz/state", leader_token)
+    check("следующий вопрос включился сам", auto["quiz"]["phase"] == "question"
+          and auto["question"]["number"] == 2, str(auto["quiz"]["phase"]))
+    check("новый вопрос — другой", auto["question"]["id"] != first_id)
+
+    status, paused = call("POST", "/api/admin/quiz/control", admin_token, payload={"action": "pause"})
+    check("админ поставил тест на паузу", status == 200 and paused["quiz"]["is_paused"] is True)
+    frozen = paused["quiz"]["remaining_seconds"]
+    time.sleep(2)
+    status, still = call("GET", "/api/quiz/state", leader_token)
+    check("на паузе таймер стоит", still["quiz"]["remaining_seconds"] == frozen)
+    status, blocked = call("POST", "/api/quiz/answer", leader_token,
+                           payload={"question_id": still["question"]["id"], "selected_index": 0})
+    check("на паузе ответ не принимается", status == 409 and blocked.get("error") == "quiz_paused")
+    status, resumed = call("POST", "/api/admin/quiz/control", admin_token, payload={"action": "resume"})
+    check("админ снял паузу", status == 200 and resumed["quiz"]["is_paused"] is False)
+
+    status, jumped = call("POST", "/api/admin/quiz/control", admin_token,
+                          payload={"action": "goto", "index": 14})
+    check("админ вывел всем выбранный вопрос", status == 200
+          and jumped["quiz"]["current_index"] == 14)
+    status, q_member = call("GET", "/api/quiz/state", member_token)
+    check("участник сразу видит новый вопрос", q_member["question"]["number"] == 15)
+
+    status, finished = call("POST", "/api/admin/quiz/control", admin_token, payload={"action": "finish"})
+    check("админ завершил тест", status == 200 and finished["quiz"]["phase"] == "finished")
+    status, final_state = call("GET", "/api/quiz/state", leader_token)
+    check("после завершения виден итоговый рейтинг", final_state["standings"] is not None)
+    check("прогресс команды сохранён", final_state["my_progress"]["answered"] == 1)
 
     print("\n=== 5. Голосование за секции ===")
     status, sections = call("GET", "/api/sections", member_token)

@@ -1,6 +1,6 @@
 /* Лента заданий. Отправлять ответ может только лидер команды. */
 
-import { api } from "../api.js";
+import { api, fileUrl } from "../api.js";
 import { t } from "../i18n.js";
 import { store } from "../store.js";
 import {
@@ -8,6 +8,7 @@ import {
   emptyState,
   escapeHtml,
   formatBytes,
+  formatCountdown,
   formatTime,
   loaderBlock,
   nl2br,
@@ -22,9 +23,10 @@ const pending = new Map();   // taskId -> File[]
 function attachmentsHtml(attachments) {
   if (!attachments || !attachments.length) return "";
   const items = attachments.map((file) => {
+    const src = fileUrl(file.url);
     const media = file.kind === "video"
-      ? `<video src="${file.url}" controls preload="metadata"></video>`
-      : `<img src="${file.url}" alt="${escapeHtml(file.original_name)}" loading="lazy">`;
+      ? `<video src="${src}" controls preload="metadata" playsinline></video>`
+      : `<a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${escapeHtml(file.original_name)}" loading="lazy"></a>`;
     return `<div class="media-item">${media}
       <div class="media-item__label">${escapeHtml(file.original_name)} · ${formatBytes(file.size_bytes)}</div>
     </div>`;
@@ -79,7 +81,62 @@ function leaderFormHtml(task) {
     </form>`;
 }
 
-function taskCardHtml(task, canSubmit) {
+function task3BannerHtml(round) {
+  if (!round) return "";
+  const number = round.task_order || "";
+  if (round.phase === "running") {
+    return `
+      <div class="card card--accent" data-task3-banner style="margin-bottom:var(--space-4)">
+        <div class="qpult" data-round-timer="${round.task_id || ""}">
+          <div class="qtimer qtimer--long">
+            <div class="qtimer__ring" style="--p:${round.phase_seconds
+              ? Math.min(100, ((round.remaining_seconds ?? 0) / round.phase_seconds) * 100)
+              : 0}%" data-task3-timer-ring>
+              <span class="qtimer__value" data-task3-timer-value>${round.is_paused ? "||" : formatCountdown(round.remaining_seconds ?? 0)}</span>
+            </div>
+          </div>
+          <div>
+            <strong>${escapeHtml(t("tasks.round.live", { n: number }))}</strong>
+            <div class="muted" style="font-size:.82rem">${escapeHtml(
+              round.is_paused ? t("quiz.paused") : t("tasks.round.live_hint"),
+            )}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+  if (round.phase === "voting" || round.phase === "closed") {
+    return `
+      <div class="qnotice qnotice--ok" style="margin-bottom:var(--space-4)">
+        ${escapeHtml(t("tasks.round.ended", { n: number }))}
+      </div>`;
+  }
+  return `
+    <div class="qnotice" style="margin-top:var(--space-4)">
+      ${escapeHtml(t("tasks.round.wait_start", { n: number }))}
+    </div>`;
+}
+
+function sealedTaskHtml(task) {
+  const own = task.my_submission
+    ? `<div class="task-card__own">${submissionHtml(task)}</div>`
+    : "";
+  return `
+    <article class="card task-card--sealed" data-task-card="${task.id}">
+      <div class="task-seal">
+        <div class="task-seal__film">
+          <div class="task-seal__icon" aria-hidden="true">🔒</div>
+          <h3 class="task-seal__title">${escapeHtml(t("tasks.round.sealed_title", { n: task.order }))}</h3>
+          <p class="task-seal__hint">${escapeHtml(t("tasks.round.sealed_hint"))}</p>
+        </div>
+      </div>
+      ${own}
+    </article>`;
+}
+
+function taskCardHtml(task, canSubmit, sealed) {
+  if (sealed || task.content_hidden) {
+    return sealedTaskHtml(task);
+  }
   return `
     <article class="card" data-task-card="${task.id}">
       <div class="card__head">
@@ -175,9 +232,52 @@ async function submitTask(taskId, form, refresh) {
   }
 }
 
-export default {
+let task3Tick = null;
+let task3Deadline = 0;
+let task3Total = 0;
+
+function stopTask3Tick() {
+  if (task3Tick) clearInterval(task3Tick);
+  task3Tick = null;
+}
+
+function startTask3Tick(root, rounds) {
+  stopTask3Tick();
+  const live = (rounds || []).filter((round) => round.phase === "running" && !round.is_paused);
+  if (!live.length) return;
+  const meta = live.map((round) => ({
+    id: round.task_id,
+    total: round.phase_seconds || 3600,
+    deadline: Date.now() + (round.remaining_seconds ?? round.phase_seconds ?? 3600) * 1000,
+  }));
+  let reloaded = false;
+  task3Tick = setInterval(() => {
+    if (!root.querySelector("[data-round-timer]")) {
+      stopTask3Tick();
+      return;
+    }
+    let expired = false;
+    meta.forEach((item) => {
+      const seconds = Math.max(0, Math.ceil((item.deadline - Date.now()) / 1000));
+      const percent = item.total ? Math.min(100, (seconds / item.total) * 100) : 0;
+      const box = root.querySelector(`[data-round-timer="${item.id}"]`);
+      if (!box) return;
+      const value = box.querySelector("[data-task3-timer-value]");
+      const ring = box.querySelector("[data-task3-timer-ring]");
+      if (value) value.textContent = formatCountdown(seconds);
+      if (ring) ring.style.setProperty("--p", `${percent}%`);
+      if (seconds <= 0) expired = true;
+    });
+    if (expired && !reloaded) {
+      reloaded = true;
+      setTimeout(() => view.render(root), 900);
+    }
+  }, 250);
+}
+
+const view = {
   id: "tasks",
-  stateKeys: ["tasks", "submissions"],
+  stateKeys: ["tasks", "submissions", "task3"],
 
   async render(root) {
     if (!root.dataset.ready) root.innerHTML = loaderBlock();
@@ -191,8 +291,15 @@ export default {
     }
 
     const canSubmit = data.can_submit && store.user?.role === "leader";
+    const rounds = Object.values(data.rounds || {});
+    const topRounds = rounds.filter((round) => round.phase === "running" || round.phase === "voting" || round.phase === "closed");
+    const waitRounds = rounds.filter((round) => !round.phase || round.phase === "idle");
     const cards = data.tasks.length
-      ? data.tasks.map((task) => taskCardHtml(task, canSubmit)).join("")
+      ? data.tasks.map((task) => {
+        const round = task.round;
+        const locked = Boolean(round && !round.can_submit) || Boolean(task.content_hidden);
+        return taskCardHtml(task, canSubmit && !locked, locked);
+      }).join("")
       : emptyState("tasks.empty", "📋");
 
     root.dataset.ready = "1";
@@ -201,7 +308,11 @@ export default {
         <h1 class="page__title">📋 <span>${escapeHtml(t("tasks.title"))}</span></h1>
         <p class="page__hint">${escapeHtml(canSubmit ? t("tasks.hint") : t("tasks.member_hint"))}</p>
       </div>
-      <div class="stack">${cards}</div>`;
+      ${topRounds.map(task3BannerHtml).join("")}
+      <div class="stack">${cards}</div>
+      ${waitRounds.map(task3BannerHtml).join("")}`;
+
+    startTask3Tick(root, rounds);
 
     // Восстановить выбранные, но не отправленные файлы.
     data.tasks.forEach((task) => {
@@ -236,3 +347,5 @@ export default {
     });
   },
 };
+
+export default view;

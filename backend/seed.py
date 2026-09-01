@@ -152,6 +152,12 @@ def seed_quiz() -> None:
     db.session.commit()
 
 
+def seed_task_round() -> None:
+    from .task3_engine import ensure_rounds
+
+    ensure_rounds()
+
+
 def seed_state_versions() -> None:
     for key in STATE_KEYS:
         if db.session.get(StateVersion, key) is None:
@@ -227,6 +233,7 @@ def seed_all(write_credentials: bool = True) -> Path | None:
     seed_teams_and_users()
     seed_sections_and_tasks()
     seed_quiz()
+    seed_task_round()
     seed_state_versions()
     bump(*STATE_KEYS)
     db.session.commit()

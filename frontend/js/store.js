@@ -2,12 +2,13 @@
 
 import { api } from "./api.js";
 
-const POLL_INTERVAL = 4000;
+const POLL_INTERVAL = 3000;
 
 export const store = {
   user: null,
   team: null,
   versions: {},
+  unreadMessages: 0,
 };
 
 const listeners = new Map();   // key -> Set<callback>
@@ -50,6 +51,11 @@ async function poll() {
     }
     firstPollDone = true;
     document.body.dataset.online = "1";
+    const unread = Number(data.unread_messages || 0);
+    if (store.unreadMessages !== unread) {
+      store.unreadMessages = unread;
+      emit(["messages"]);
+    }
     if (changed.length) emit(changed);
   } catch (error) {
     document.body.dataset.online = "0";

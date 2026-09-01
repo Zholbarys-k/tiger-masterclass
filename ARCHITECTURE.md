@@ -58,7 +58,9 @@ Task(id, order, title_kk/ru/en, body_kk/ru/en, max_points, is_published, created
 Section(id, code, name_kk/ru/en, desc_kk/ru/en, capacity, is_open)
  └─ Vote(id, user_id UNIQUE, section_id, created_at)     # 1 голос на пользователя, можно менять
 
-Quiz(id, title_kk/ru/en, is_open, show_results, opened_at, closed_at)
+Quiz(id, title_kk/ru/en, is_open, show_results, opened_at, closed_at,
+     phase, current_index, phase_started_at, phase_ends_at,
+     question_seconds, standings_seconds, auto_advance, is_paused, paused_remaining)
  └─ Question(id, quiz_id, order, text_kk/ru/en, options_kk/ru/en JSON, correct_index, points)
      └─ QuizAnswer(id, question_id, team_id, user_id, selected_index, is_correct, points)
         UNIQUE(question_id, team_id)   # одна попытка команды на вопрос
@@ -79,16 +81,34 @@ total(team) = Σ Submission.points + Σ QuizAnswer.points + Σ ScoreAdjustment.d
 - Клиент показывает **ТОП-10**, кнопка «Показать всех» раскрывает полный список.
 - Сортировка: баллы ↓, затем время последней активности ↑ (кто раньше — выше).
 
-## 6. Тестовый модуль
+## 6. Тестовый модуль (синхронный, один вопрос на всех)
 
-1. Админ жмёт «Открыть тест» → `Quiz.is_open = true`, версия `quiz` растёт.
-2. Все 15 вопросов появляются одновременно у всех пользователей (лидеров и участников).
-3. **Участник** видит вопросы и варианты, но элементы выбора заблокированы (`disabled`),
-   сервер отклоняет их ответы с 403.
-4. **Лидер** выбирает вариант и отправляет — сервер сразу возвращает
-   `{ is_correct, points, team_quiz_points }`, лидер моментально видит результат.
-5. Повторный ответ на тот же вопрос запрещён (UNIQUE question_id+team_id).
-6. Баллы теста немедленно учитываются в рейтинге.
+Состояние теста живёт в четырёх фазах: `idle → question → standings → … → finished`.
+
+1. Админ открывает тест (`Quiz.is_open`), затем жмёт «Начать тест» →
+   фаза `question`, `current_index = 0`, `phase_ends_at = now + question_seconds` (по умолчанию 60 с).
+2. Все участники и лидеры видят **один и тот же текущий вопрос** и один и тот же таймер.
+   Клиент считает секунды локально от полученного `remaining_seconds`, поэтому расхождения
+   часов на телефонах не влияют.
+3. **Участник** видит вопрос и варианты, но кнопки заблокированы; сервер отклоняет его ответ (403).
+   **Лидер** выбирает вариант → ответ принят (`accepted`), правильность пока не раскрывается,
+   экран переходит в режим ожидания остальных команд.
+4. Когда время вышло (или админ нажал «Показать рейтинг сейчас») → фаза `standings`:
+   правильный ответ, свой результат, сколько команд ответило и место команды в рейтинге.
+5. Через `standings_seconds` включается следующий вопрос — сразу у всех. Если
+   `auto_advance = false`, переход ждёт кнопки администратора.
+6. После последнего вопроса — фаза `finished` с итоговым рейтингом.
+7. Повторный ответ на вопрос запрещён (UNIQUE question_id+team_id), баллы сразу идут в рейтинг.
+
+Смена фаз не требует планировщика: `backend/quiz_engine.ensure_progress()` пересчитывает
+расписание по `phase_ends_at` при каждом обращении к `/api/state` и `/api/quiz/state`,
+а сам переход выполняется условным `UPDATE ... WHERE phase = ? AND current_index = ?`,
+поэтому параллельные запросы сотен клиентов не могут перескочить вопрос дважды.
+
+Пульт администратора (`POST /api/admin/quiz/control`): `start`, `reveal`, `next`, `prev`,
+`goto`, `extend`, `pause`, `resume`, `finish`, `reset`.
+Тайминги на ходу: `POST /api/admin/quiz/settings` (`question_seconds`, `standings_seconds`,
+`auto_advance`, `show_results`) — новое время применяется и к уже идущей фазе.
 
 ## 7. Загрузка файлов
 

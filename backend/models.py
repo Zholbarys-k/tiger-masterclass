@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import UniqueConstraint, func
@@ -11,6 +12,23 @@ from .db import db
 ROLE_ADMIN = "admin"
 ROLE_LEADER = "leader"
 ROLE_MEMBER = "member"
+
+# Фазы синхронного теста: один вопрос на всех, затем рейтинг, затем следующий.
+PHASE_IDLE = "idle"            # тест открыт, но ещё не запущен администратором
+PHASE_QUESTION = "question"    # идёт вопрос, лидеры отвечают
+PHASE_STANDINGS = "standings"  # время вышло: правильный ответ и рейтинг команд
+PHASE_FINISHED = "finished"    # вопросы закончились
+QUIZ_PHASES = (PHASE_IDLE, PHASE_QUESTION, PHASE_STANDINGS, PHASE_FINISHED)
+
+# Фазы задания с таймером (№2, №3 и новые): час на работу, затем голосование.
+TIMED_TASK_MIN_ORDER = 2
+TASK3_ORDER = 3
+PHASE_T3_IDLE = "idle"
+PHASE_T3_RUNNING = "running"
+PHASE_T3_VOTING = "voting"
+PHASE_T3_CLOSED = "closed"
+TASK3_PHASES = (PHASE_T3_IDLE, PHASE_T3_RUNNING, PHASE_T3_VOTING, PHASE_T3_CLOSED)
+TASK3_DEFAULT_SECONDS = 3600
 
 
 def utcnow() -> datetime:
@@ -107,21 +125,34 @@ class User(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     last_login_at = db.Column(db.DateTime, nullable=True)
+    school = db.Column(db.String(120), default="", nullable=False)
+    grade = db.Column(db.String(40), default="", nullable=False)
+    about = db.Column(db.String(400), default="", nullable=False)
 
     team = db.relationship("Team", back_populates="users")
     tokens = db.relationship("AuthToken", back_populates="user", cascade="all, delete-orphan")
     vote = db.relationship("Vote", back_populates="user", uselist=False,
                            cascade="all, delete-orphan")
+    project_votes = db.relationship("ProjectVote", back_populates="user",
+                                   cascade="all, delete-orphan")
 
     @property
     def is_admin(self) -> bool:
         return self.role == ROLE_ADMIN
 
+    @property
+    def profile_filled(self) -> bool:
+        return bool((self.display_name or "").strip())
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "login": self.login,
-            "display_name": self.display_name,
+            "display_name": self.display_name or "",
+            "school": self.school or "",
+            "grade": self.grade or "",
+            "about": self.about or "",
+            "profile_filled": self.profile_filled,
             "role": self.role,
             "team_id": self.team_id,
             "team_name": self.team.name if self.team else None,
@@ -305,6 +336,96 @@ class Vote(db.Model):
         }
 
 
+class TaskRound(db.Model):
+    """Синхронный таймер задания: час на работу, затем голосование лайками."""
+
+    __tablename__ = "task_rounds"
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=True, unique=True, index=True)
+    task_order = db.Column(db.Integer, default=TASK3_ORDER, nullable=False)
+    phase = db.Column(db.String(16), default=PHASE_T3_IDLE, nullable=False)
+    duration_seconds = db.Column(db.Integer, default=TASK3_DEFAULT_SECONDS, nullable=False)
+    phase_started_at = db.Column(db.DateTime, nullable=True)
+    phase_ends_at = db.Column(db.DateTime, nullable=True)
+    is_paused = db.Column(db.Boolean, default=False, nullable=False)
+    paused_remaining = db.Column(db.Integer, default=0, nullable=False)
+
+    task = db.relationship("Task")
+
+    @property
+    def is_live(self) -> bool:
+        return self.phase == PHASE_T3_RUNNING
+
+    @property
+    def can_submit(self) -> bool:
+        return self.phase == PHASE_T3_RUNNING
+
+    @property
+    def projects_visible(self) -> bool:
+        return self.phase in (PHASE_T3_VOTING, PHASE_T3_CLOSED)
+
+    @property
+    def can_like(self) -> bool:
+        return self.phase == PHASE_T3_VOTING
+
+    @property
+    def remaining_seconds(self) -> int | None:
+        if not self.is_live:
+            return None
+        if self.is_paused:
+            return max(0, self.paused_remaining or 0)
+        if self.phase_ends_at is None:
+            return None
+        left = (self.phase_ends_at - utcnow()).total_seconds()
+        return max(0, int(math.ceil(left)))
+
+    def to_dict(self) -> dict:
+        return {
+            "task_id": self.task_id,
+            "task_order": self.task_order,
+            "phase": self.phase,
+            "duration_seconds": self.duration_seconds,
+            "is_paused": self.is_paused,
+            "remaining_seconds": self.remaining_seconds,
+            "phase_seconds": self.duration_seconds,
+            "phase_started_at": self.phase_started_at.isoformat() if self.phase_started_at else None,
+            "phase_ends_at": self.phase_ends_at.isoformat() if self.phase_ends_at else None,
+            "can_submit": self.can_submit,
+            "projects_visible": self.projects_visible,
+            "can_like": self.can_like,
+        }
+
+
+class ProjectVote(db.Model):
+    """Один лайк участника за проект конкретного задания."""
+
+    __tablename__ = "project_votes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=True, index=True)
+    submission_id = db.Column(db.Integer, db.ForeignKey("submissions.id"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    user = db.relationship("User", back_populates="project_votes")
+    submission = db.relationship("Submission")
+
+    __table_args__ = (UniqueConstraint("user_id", "task_id", name="uq_project_vote_user_task"),)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "user_login": self.user.login if self.user else "",
+            "user_role": self.user.role if self.user else "",
+            "team_name": self.user.team.name if self.user and self.user.team else "",
+            "task_id": self.task_id,
+            "submission_id": self.submission_id,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 class Quiz(db.Model):
     __tablename__ = "quizzes"
 
@@ -317,9 +438,54 @@ class Quiz(db.Model):
     opened_at = db.Column(db.DateTime, nullable=True)
     closed_at = db.Column(db.DateTime, nullable=True)
 
+    # --- синхронный режим «один вопрос на всех» ---
+    phase = db.Column(db.String(16), default=PHASE_IDLE, nullable=False)
+    current_index = db.Column(db.Integer, default=0, nullable=False)
+    phase_started_at = db.Column(db.DateTime, nullable=True)
+    phase_ends_at = db.Column(db.DateTime, nullable=True)
+    question_seconds = db.Column(db.Integer, default=60, nullable=False)
+    standings_seconds = db.Column(db.Integer, default=20, nullable=False)
+    auto_advance = db.Column(db.Boolean, default=True, nullable=False)
+    is_paused = db.Column(db.Boolean, default=False, nullable=False)
+    paused_remaining = db.Column(db.Integer, default=0, nullable=False)
+
     questions = db.relationship("Question", back_populates="quiz",
                                 cascade="all, delete-orphan",
                                 order_by="Question.order", lazy="selectin")
+
+    # --- живое состояние ---
+    @property
+    def questions_count(self) -> int:
+        return len(self.questions)
+
+    def question_at(self, index: int):
+        if 0 <= index < len(self.questions):
+            return self.questions[index]
+        return None
+
+    @property
+    def current_question(self):
+        return self.question_at(self.current_index)
+
+    @property
+    def is_live(self) -> bool:
+        return self.phase in (PHASE_QUESTION, PHASE_STANDINGS)
+
+    @property
+    def remaining_seconds(self) -> int | None:
+        """Сколько секунд осталось до конца текущей фазы (None — таймера нет)."""
+        if not self.is_live:
+            return None
+        if self.is_paused:
+            return max(0, self.paused_remaining or 0)
+        if self.phase_ends_at is None:
+            return None
+        left = (self.phase_ends_at - utcnow()).total_seconds()
+        return max(0, int(math.ceil(left)))
+
+    @property
+    def phase_seconds(self) -> int:
+        return self.question_seconds if self.phase == PHASE_QUESTION else self.standings_seconds
 
     def to_dict(self, lang: str = "ru") -> dict:
         return {
@@ -330,6 +496,17 @@ class Quiz(db.Model):
             "questions_count": len(self.questions),
             "total_points": sum(q.points for q in self.questions),
             "opened_at": self.opened_at.isoformat() if self.opened_at else None,
+            "phase": self.phase,
+            "current_index": self.current_index,
+            "current_number": self.current_index + 1 if self.is_live else 0,
+            "question_seconds": self.question_seconds,
+            "standings_seconds": self.standings_seconds,
+            "auto_advance": self.auto_advance,
+            "is_paused": self.is_paused,
+            "remaining_seconds": self.remaining_seconds,
+            "phase_seconds": self.phase_seconds,
+            "phase_started_at": self.phase_started_at.isoformat() if self.phase_started_at else None,
+            "phase_ends_at": self.phase_ends_at.isoformat() if self.phase_ends_at else None,
         }
 
 
@@ -434,6 +611,62 @@ class ScoreAdjustment(db.Model):
         }
 
 
+class Message(db.Model):
+    """Переписка участника/лидера с администраторами (одна ветка на человека)."""
+
+    __tablename__ = "messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    thread_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    body = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    thread_user = db.relationship("User", foreign_keys=[thread_user_id])
+    author = db.relationship("User", foreign_keys=[author_id])
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "thread_user_id": self.thread_user_id,
+            "author_id": self.author_id,
+            "author_login": self.author.login if self.author else "",
+            "author_name": (self.author.display_name if self.author else "") or "",
+            "author_role": self.author.role if self.author else "",
+            "body": self.body,
+            "is_read": self.is_read,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class TeamMessage(db.Model):
+    """Сообщения внутри команды: видят лидер и участники своей команды."""
+
+    __tablename__ = "team_messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    team = db.relationship("Team")
+    author = db.relationship("User")
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "team_id": self.team_id,
+            "author_id": self.author_id,
+            "author_login": self.author.login if self.author else "",
+            "author_name": (self.author.display_name if self.author else "") or "",
+            "author_role": self.author.role if self.author else "",
+            "body": self.body,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class StateVersion(db.Model):
     """Счётчики версий для «реального времени» через лёгкий polling."""
 
@@ -444,7 +677,7 @@ class StateVersion(db.Model):
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
 
-STATE_KEYS = ("tasks", "quiz", "votes", "leaderboard", "teams", "submissions")
+STATE_KEYS = ("tasks", "quiz", "votes", "leaderboard", "teams", "submissions", "messages", "teamchat", "task3")
 
 
 def bump(*keys: str) -> None:

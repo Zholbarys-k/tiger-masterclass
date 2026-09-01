@@ -36,8 +36,9 @@ def create_app(config_object: type = app_config.Config) -> Flask:
     from .routes.vote_routes import bp as vote_bp
     from .routes.quiz_routes import bp as quiz_bp
     from .routes.leaderboard_routes import bp as leaderboard_bp
+    from .routes.message_routes import bp as message_bp
 
-    for blueprint in (auth_bp, admin_bp, task_bp, vote_bp, quiz_bp, leaderboard_bp):
+    for blueprint in (auth_bp, admin_bp, task_bp, vote_bp, quiz_bp, leaderboard_bp, message_bp):
         app.register_blueprint(blueprint)
 
     _register_frontend(app)
@@ -45,10 +46,97 @@ def create_app(config_object: type = app_config.Config) -> Flask:
 
     with app.app_context():
         db.create_all()
+        _ensure_schema(app)
+        _ensure_task_rounds(app)
         if app.config.get("AUTO_SEED", True):
             _seed_if_empty(app)
 
     return app
+
+
+# Столбцы, добавленные после первых запусков: досоздаём их без потери данных,
+# чтобы не пересоздавать базу с логинами участников.
+NEW_COLUMNS: dict[str, dict[str, str]] = {
+    "quizzes": {
+        "phase": "VARCHAR(16) NOT NULL DEFAULT 'idle'",
+        "current_index": "INTEGER NOT NULL DEFAULT 0",
+        "phase_started_at": "DATETIME",
+        "phase_ends_at": "DATETIME",
+        "question_seconds": "INTEGER NOT NULL DEFAULT 60",
+        "standings_seconds": "INTEGER NOT NULL DEFAULT 20",
+        "auto_advance": "BOOLEAN NOT NULL DEFAULT 1",
+        "is_paused": "BOOLEAN NOT NULL DEFAULT 0",
+        "paused_remaining": "INTEGER NOT NULL DEFAULT 0",
+    },
+    "users": {
+        "school": "VARCHAR(120) NOT NULL DEFAULT ''",
+        "grade": "VARCHAR(40) NOT NULL DEFAULT ''",
+        "about": "VARCHAR(400) NOT NULL DEFAULT ''",
+    },
+    "task_rounds": {
+        "task_id": "INTEGER",
+    },
+    "project_votes": {
+        "task_id": "INTEGER",
+    },
+}
+
+
+def _ensure_schema(app: Flask) -> None:
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+    tables = set(inspector.get_table_names())
+    for table, columns in NEW_COLUMNS.items():
+        if table not in tables:
+            continue
+        existing = {column["name"] for column in inspector.get_columns(table)}
+        for name, ddl in columns.items():
+            if name in existing:
+                continue
+            try:
+                db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
+                db.session.commit()
+                app.logger.info("Схема обновлена: %s.%s", table, name)
+            except Exception as error:  # pragma: no cover
+                db.session.rollback()
+                app.logger.error("Не удалось добавить %s.%s: %s", table, name, error)
+    _rebuild_project_votes(app)
+
+
+def _rebuild_project_votes(app: Flask) -> None:
+    """Один лайк на задание: пересоздать уникальность user_id+task_id."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+    if "project_votes" not in inspector.get_table_names():
+        return
+    uniques = inspector.get_unique_constraints("project_votes")
+    names = {item.get("name") for item in uniques}
+    cols = [item.get("column_names") or [] for item in uniques]
+    if any(set(columns) == {"user_id", "task_id"} for columns in cols):
+        return
+    if "uq_project_vote_user_task" in names:
+        return
+    try:
+        db.session.execute(text("DROP TABLE IF EXISTS project_votes"))
+        db.session.commit()
+        from .models import ProjectVote
+
+        ProjectVote.__table__.create(db.engine)
+        app.logger.info("Таблица project_votes обновлена: лайк на каждое задание")
+    except Exception as error:  # pragma: no cover
+        db.session.rollback()
+        app.logger.error("Не удалось обновить project_votes: %s", error)
+
+
+def _ensure_task_rounds(app: Flask) -> None:
+    try:
+        from .task3_engine import ensure_rounds
+
+        ensure_rounds()
+    except Exception as error:  # pragma: no cover
+        app.logger.error("Не удалось создать пульты заданий: %s", error)
 
 
 def _seed_if_empty(app: Flask) -> None:

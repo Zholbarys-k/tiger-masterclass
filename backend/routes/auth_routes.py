@@ -54,3 +54,22 @@ def me():
         user=g.user.to_dict(),
         team=team.to_dict(with_users=True) if team else None,
     )
+
+
+@bp.patch("/profile")
+@require_auth
+def update_profile():
+    """Участник или лидер заполняет данные о себе."""
+    data = request.get_json(silent=True) or {}
+
+    if "display_name" in data:
+        g.user.display_name = (data.get("display_name") or "").strip()[:120]
+    if "school" in data:
+        g.user.school = (data.get("school") or "").strip()[:120]
+    if "grade" in data:
+        g.user.grade = (data.get("grade") or "").strip()[:40]
+    if "about" in data:
+        g.user.about = (data.get("about") or "").strip()[:400]
+
+    db.session.commit()
+    return json_ok(user=g.user.to_dict())

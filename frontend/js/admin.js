@@ -1,6 +1,6 @@
 /* Панель администратора: команды, баллы, задания, тест, ответы, голоса, рейтинг. */
 
-import { api, auth } from "./api.js";
+import { api, auth, fileUrl } from "./api.js";
 import { applyTranslations, initI18n, mountLangSwitch, t } from "./i18n.js";
 import { startPolling, store, subscribe } from "./store.js";
 import {
@@ -9,6 +9,7 @@ import {
   emptyState,
   escapeHtml,
   formatBytes,
+  formatCountdown,
   formatTime,
   loaderBlock,
   nl2br,
@@ -53,14 +54,21 @@ const overviewTab = {
       <div class="card" style="margin-top:var(--space-4)">
         <div class="spread">
           <h3 class="card__title">🧠 ${escapeHtml(t("admin.quiz.status"))}</h3>
-          <span class="badge ${data.quiz?.is_open ? "badge--success" : "badge--danger"}">
-            ${escapeHtml(data.quiz?.is_open ? t("admin.quiz.is_open") : t("admin.quiz.is_closed"))}
-          </span>
+          <div class="row">
+            <span class="badge ${data.quiz?.is_open ? "badge--success" : "badge--danger"}">
+              ${escapeHtml(data.quiz?.is_open ? t("admin.quiz.is_open") : t("admin.quiz.is_closed"))}
+            </span>
+            <span class="badge badge--info">
+              ${escapeHtml(t(PHASE_LABELS[data.quiz?.phase] || "admin.quiz.phase_idle"))}
+              ${data.quiz?.current_number ? `· ${data.quiz.current_number}/${data.quiz.questions_count}` : ""}
+            </span>
+          </div>
         </div>
         <div class="card__body row">
           <button type="button" class="btn ${data.quiz?.is_open ? "btn--danger" : "btn--primary"}" data-quiz-toggle>
             ${escapeHtml(data.quiz?.is_open ? t("admin.quiz.close") : t("admin.quiz.open"))}
           </button>
+          <button type="button" class="btn btn--ghost" data-go-quiz>🎛️ ${escapeHtml(t("admin.quiz.control"))}</button>
         </div>
       </div>
 
@@ -73,6 +81,8 @@ const overviewTab = {
             <code class="badge badge--info">${escapeHtml(data.admin_password)}</code></div>
         </div>
       </div>`;
+
+    content.querySelector("[data-go-quiz]")?.addEventListener("click", () => activate("quiz"));
 
     content.querySelector("[data-quiz-toggle]")?.addEventListener("click", async (event) => {
       event.target.disabled = true;
@@ -378,18 +388,209 @@ function wireTeamActions() {
 /* ------------------------------------------------------------------ */
 /* Задания                                                            */
 /* ------------------------------------------------------------------ */
+const T3_PHASE_LABELS = {
+  idle: "admin.round.phase_idle",
+  running: "admin.round.phase_running",
+  voting: "admin.round.phase_voting",
+  closed: "admin.round.phase_closed",
+};
+
+let task3Tick = null;
+let task3Deadline = 0;
+let task3Total = 0;
+
+function stopTask3Tick() {
+  if (task3Tick) clearInterval(task3Tick);
+  task3Tick = null;
+}
+
+function startTask3Tick(roundItems) {
+  stopTask3Tick();
+  const live = (roundItems || []).filter((item) => item.round?.phase === "running" && !item.round.is_paused);
+  if (!live.length) return;
+
+  const meta = live.map((item) => ({
+    id: item.task_id,
+    total: item.round.phase_seconds || 3600,
+    deadline: Date.now() + (item.round.remaining_seconds ?? item.round.phase_seconds ?? 3600) * 1000,
+  }));
+  let reloaded = false;
+
+  task3Tick = setInterval(() => {
+    if (activeTab !== "tasks" || !content.querySelector("[data-round-timer]")) {
+      stopTask3Tick();
+      return;
+    }
+    let expired = false;
+    meta.forEach((item) => {
+      const seconds = Math.max(0, Math.ceil((item.deadline - Date.now()) / 1000));
+      const percent = item.total ? Math.min(100, (seconds / item.total) * 100) : 0;
+      const box = content.querySelector(`[data-round-timer="${item.id}"]`);
+      if (!box) return;
+      const value = box.querySelector("[data-task3-timer-value]");
+      const ring = box.querySelector("[data-task3-timer-ring]");
+      if (value) value.textContent = formatCountdown(seconds);
+      if (ring) ring.style.setProperty("--p", `${percent}%`);
+      box.classList.toggle("is-low", seconds <= 60 && seconds > 0);
+      if (seconds <= 0) expired = true;
+    });
+    if (expired && !reloaded) {
+      reloaded = true;
+      setTimeout(() => { if (activeTab === "tasks") render(); }, 900);
+    }
+  }, 250);
+}
+
+function task3ControlsHtml(item) {
+  const round = item.round || {};
+  const live = round.phase === "running";
+  const started = round.phase !== "idle";
+  const percent = round.phase_seconds
+    ? Math.min(100, ((round.remaining_seconds ?? 0) / round.phase_seconds) * 100)
+    : 0;
+  const minutes = Math.round((round.duration_seconds || 3600) / 60);
+  const number = item.task_order || round.task_order || "";
+
+  return `
+    <div class="card card--accent" style="margin-bottom:var(--space-4)" data-round="${item.task_id}">
+      <div class="spread">
+        <div style="min-width:0">
+          <h3 class="card__title">${escapeHtml(t("admin.round.title", { n: number }))}</h3>
+          <div class="muted" style="font-size:.82rem">${escapeHtml(item.task_title || t("admin.round.hint"))}</div>
+        </div>
+        <div class="row">
+          <span class="badge badge--info">${escapeHtml(t(T3_PHASE_LABELS[round.phase] || "admin.round.phase_idle"))}</span>
+          ${round.is_paused ? `<span class="badge badge--accent">⏸ ${escapeHtml(t("admin.quiz.paused"))}</span>` : ""}
+          <span class="badge badge--muted">${item.submissions_count || 0} 📨</span>
+          <button type="button" class="btn btn--icon btn--danger qpult-close"
+            data-delete-task="${item.task_id}"
+            title="${escapeHtml(t("admin.tasks.delete"))}"
+            aria-label="${escapeHtml(t("admin.tasks.delete"))}">✕</button>
+        </div>
+      </div>
+
+      <div class="card__body">
+        ${live ? `
+        <div class="qpult" data-round-timer="${item.task_id}">
+          <div class="qtimer qtimer--long">
+            <div class="qtimer__ring" style="--p:${percent}%" data-task3-timer-ring>
+              <span class="qtimer__value" data-task3-timer-value>${round.is_paused ? "||" : formatCountdown(round.remaining_seconds ?? 0)}</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-weight:700">${escapeHtml(t("admin.round.live_title"))}</div>
+            <div class="muted" style="font-size:.82rem">${escapeHtml(t("admin.round.live_hint"))}</div>
+          </div>
+        </div>` : ""}
+
+        <div class="row" style="margin-top:var(--space-3); flex-wrap:wrap">
+          <button type="button" class="btn btn--primary" data-t3="start" data-task="${item.task_id}">
+            ${escapeHtml(started ? t("admin.round.restart") : t("admin.round.start"))}</button>
+          ${live ? `
+          <button type="button" class="btn btn--ghost" data-t3="${round.is_paused ? "resume" : "pause"}" data-task="${item.task_id}">
+            ${escapeHtml(round.is_paused ? `▶️ ${t("admin.quiz.resume")}` : `⏸ ${t("admin.quiz.pause")}`)}</button>
+          <button type="button" class="btn btn--ghost" data-t3-extend="300" data-task="${item.task_id}">+5 ${escapeHtml(t("admin.round.min"))}</button>
+          <button type="button" class="btn btn--ghost" data-t3-extend="900" data-task="${item.task_id}">+15 ${escapeHtml(t("admin.round.min"))}</button>
+          <button type="button" class="btn btn--ghost" data-t3-extend="-300" data-task="${item.task_id}">−5 ${escapeHtml(t("admin.round.min"))}</button>
+          <button type="button" class="btn btn--success" data-t3="finish" data-task="${item.task_id}">🗳️ ${escapeHtml(t("admin.round.finish"))}</button>` : ""}
+          ${round.phase === "voting"
+            ? `<button type="button" class="btn btn--ghost" data-t3="close" data-task="${item.task_id}">🏁 ${escapeHtml(t("admin.round.close"))}</button>`
+            : ""}
+          ${round.phase === "closed"
+            ? `<button type="button" class="btn btn--success" data-t3="open" data-task="${item.task_id}">🗳️ ${escapeHtml(t("admin.round.reopen"))}</button>`
+            : ""}
+          ${started ? `<button type="button" class="btn btn--ghost" data-t3="reset" data-task="${item.task_id}">🔄 ${escapeHtml(t("admin.round.reset"))}</button>` : ""}
+        </div>
+
+        <div class="qpult-settings">
+          <div class="field">
+            <label class="field__label">${escapeHtml(t("admin.round.duration"))}</label>
+            <input class="input input--sm input--score" type="number" min="1" max="240"
+                   data-t3-minutes="${item.task_id}" value="${minutes}">
+          </div>
+          <button type="button" class="btn btn--sm btn--primary" data-t3-save="${item.task_id}">
+            ${escapeHtml(t("common.save"))}</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 const tasksTab = {
-  stateKeys: ["tasks", "submissions"],
+  stateKeys: ["tasks", "submissions", "task3"],
 
   async render() {
-    const data = await api.admin.tasks();
+    stopTask3Tick();
+    const [data, roundsData] = await Promise.all([api.admin.tasks(), api.admin.rounds()]);
+    const roundItems = roundsData.rounds || [];
+
     content.innerHTML = `
-      <div class="row" style="margin-bottom:var(--space-4)">
+      ${roundItems.map(task3ControlsHtml).join("")}
+      <div class="row" style="margin-bottom:var(--space-4); flex-wrap:wrap">
         <button type="button" class="btn btn--primary" data-new-task>➕ ${escapeHtml(t("admin.tasks.new"))}</button>
+        <button type="button" class="btn btn--danger" data-reset-all-subs>
+          🔄 ${escapeHtml(t("admin.subs.reset_all"))}</button>
       </div>
       <div class="stack">${data.tasks.length
         ? data.tasks.map(taskCardHtml).join("")
         : emptyState("admin.tasks.empty", "📋")}</div>`;
+
+    const control = async (taskId, action, payload = {}) => {
+      try {
+        await api.admin.roundControl(taskId, action, payload);
+        notify.ok(t("admin.round.applied"));
+      } catch (error) {
+        notify.err(apiErrorMessage(error));
+      }
+      render();
+    };
+
+    content.querySelectorAll("[data-t3]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const action = button.dataset.t3;
+        const taskId = Number(button.dataset.task);
+        const item = roundItems.find((row) => row.task_id === taskId);
+        const phase = item?.round?.phase;
+        if (action === "start" && phase !== "idle") {
+          if (!await confirmDialog(t("admin.round.confirm_restart"))) return;
+        }
+        if (action === "finish" && !await confirmDialog(t("admin.round.confirm_finish"))) return;
+        if (action === "reset" && !await confirmDialog(t("admin.round.confirm_reset"))) return;
+        await control(taskId, action, action === "reset" ? { clear_likes: true } : {});
+      });
+    });
+
+    content.querySelectorAll("[data-t3-extend]").forEach((button) => {
+      button.addEventListener("click", () => control(Number(button.dataset.task), "extend", {
+        seconds: Number(button.dataset.t3Extend),
+      }));
+    });
+
+    content.querySelectorAll("[data-t3-save]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const taskId = Number(button.dataset.t3Save);
+        const minutes = Number(content.querySelector(`[data-t3-minutes="${taskId}"]`)?.value || 60);
+        try {
+          await api.admin.roundSettings(taskId, { duration_seconds: Math.round(minutes * 60) });
+          notify.ok(t("admin.round.settings_saved"));
+        } catch (error) {
+          notify.err(apiErrorMessage(error));
+        }
+        render();
+      });
+    });
+
+    content.querySelector("[data-reset-all-subs]")?.addEventListener("click", async () => {
+      if (!await confirmDialog(t("admin.subs.confirm_reset_all"))) return;
+      try {
+        await api.admin.resetSubmissions();
+        notify.ok(t("admin.subs.reset_done"));
+        render();
+      } catch (error) {
+        notify.err(apiErrorMessage(error));
+      }
+    });
+
+    startTask3Tick(roundItems);
 
     content.querySelector("[data-new-task]").addEventListener("click", () => openTaskModal(null));
 
@@ -513,76 +714,273 @@ function openTaskModal(task) {
 /* ------------------------------------------------------------------ */
 /* Тест                                                               */
 /* ------------------------------------------------------------------ */
-const quizTab = {
-  stateKeys: ["quiz"],
+const PHASE_LABELS = {
+  idle: "admin.quiz.phase_idle",
+  question: "admin.quiz.phase_question",
+  standings: "admin.quiz.phase_standings",
+  finished: "admin.quiz.phase_finished",
+};
 
-  async render() {
-    const [state, results] = await Promise.all([
-      api.admin.quizQuestions(),
-      api.admin.quizResults(),
-    ]);
-    const quiz = state.quiz || results.quiz;
+let quizTick = null;
+let quizDeadline = 0;
+let quizTotal = 0;
 
-    const rows = (results.rows || []).map((row) => {
-      const bars = row.options.map((option, index) => {
-        const count = row.distribution[String(index)] || 0;
-        const percent = row.answers_count ? Math.round((count * 100) / row.answers_count) : 0;
-        const correct = index === row.correct_index;
-        return `
-          <div style="margin-top:6px">
-            <div class="spread" style="font-size:.82rem">
-              <span>${correct ? "✅ " : ""}${escapeHtml(option)}</span>
-              <span class="muted">${count} · ${percent}%</span>
-            </div>
-            <div class="progress"><div class="progress__bar" style="width:${percent}%;
-              ${correct ? "background:linear-gradient(90deg,#34d399,#a7f3d0)" : ""}"></div></div>
-          </div>`;
-      }).join("");
+function stopQuizTick() {
+  if (quizTick) clearInterval(quizTick);
+  quizTick = null;
+}
 
-      return `
-        <article class="card">
-          <div class="card__head">
-            <div><strong>${row.order}. ${escapeHtml(row.text)}</strong></div>
-            <div class="row">
-              <span class="badge badge--info">${escapeHtml(t("admin.quiz.answers_count"))}: ${row.answers_count}</span>
-              <span class="badge badge--success">${escapeHtml(t("admin.quiz.correct_count"))}: ${row.correct_count}</span>
-            </div>
+/* Живой таймер пульта: цифры тикают локально, перерисовка — по окончании фазы. */
+function startQuizTick(quiz) {
+  stopQuizTick();
+  if (!quiz || quiz.is_paused) return;
+  if (quiz.phase !== "question" && quiz.phase !== "standings") return;
+
+  quizTotal = quiz.phase_seconds || 60;
+  quizDeadline = Date.now() + (quiz.remaining_seconds ?? quizTotal) * 1000;
+  let reloaded = false;
+
+  quizTick = setInterval(() => {
+    if (activeTab !== "quiz" || !content.querySelector("[data-quiz-timer]")) {
+      stopQuizTick();
+      return;
+    }
+    const seconds = Math.max(0, Math.ceil((quizDeadline - Date.now()) / 1000));
+    const percent = quizTotal ? Math.min(100, (seconds / quizTotal) * 100) : 0;
+    const value = content.querySelector("[data-quiz-timer-value]");
+    const ring = content.querySelector("[data-quiz-timer-ring]");
+    if (value) value.textContent = String(seconds);
+    if (ring) ring.style.setProperty("--p", `${percent}%`);
+
+    if (seconds <= 0 && !reloaded) {
+      reloaded = true;
+      setTimeout(() => { if (activeTab === "quiz") render(); }, 900);
+    }
+  }, 250);
+}
+
+function quizControlsHtml(quiz) {
+  const live = quiz.phase === "question" || quiz.phase === "standings";
+  const started = quiz.phase !== "idle";
+  const percent = quiz.phase_seconds
+    ? Math.min(100, ((quiz.remaining_seconds ?? 0) / quiz.phase_seconds) * 100)
+    : 0;
+
+  return `
+    <div class="card card--accent">
+      <div class="spread">
+        <div style="min-width:0">
+          <h3 class="card__title">${escapeHtml(quiz.title || t("quiz.title"))}</h3>
+          <div class="muted" style="font-size:.82rem">
+            ${escapeHtml(t("quiz.total_questions", { total: quiz.questions_count }))}
+            · ${quiz.total_points} ${escapeHtml(t("common.pts"))}
           </div>
-          <div class="card__body">${bars}</div>
-        </article>`;
-    }).join("");
-
-    content.innerHTML = `
-      <div class="card card--accent">
-        <div class="spread">
-          <div>
-            <h3 class="card__title">${escapeHtml(quiz?.title || t("quiz.title"))}</h3>
-            <div class="muted" style="font-size:.82rem">
-              ${quiz?.questions_count || 0} ${escapeHtml(t("quiz.question"))} · ${quiz?.total_points || 0} ${escapeHtml(t("common.pts"))}
-            </div>
-          </div>
-          <span class="badge ${quiz?.is_open ? "badge--success" : "badge--danger"}">
-            ${escapeHtml(quiz?.is_open ? t("admin.quiz.is_open") : t("admin.quiz.is_closed"))}</span>
         </div>
-        <div class="card__body row">
-          <button type="button" class="btn ${quiz?.is_open ? "btn--danger" : "btn--primary"}" data-toggle>
-            ${escapeHtml(quiz?.is_open ? t("admin.quiz.close") : t("admin.quiz.open"))}</button>
-          <button type="button" class="btn btn--ghost" data-reset>🔄 ${escapeHtml(t("admin.quiz.reset"))}</button>
-          <label class="row" style="margin-left:auto">
-            <input type="checkbox" data-show-results ${quiz?.show_results ? "checked" : ""}
+        <div class="row">
+          <span class="badge ${quiz.is_open ? "badge--success" : "badge--danger"}">
+            ${escapeHtml(quiz.is_open ? t("admin.quiz.is_open") : t("admin.quiz.is_closed"))}</span>
+          <span class="badge badge--info">${escapeHtml(t(PHASE_LABELS[quiz.phase] || "admin.quiz.phase_idle"))}</span>
+          ${quiz.is_paused ? `<span class="badge badge--accent">⏸ ${escapeHtml(t("admin.quiz.paused"))}</span>` : ""}
+        </div>
+      </div>
+
+      <div class="card__body">
+        ${live ? `
+        <div class="qpult" data-quiz-timer>
+          <div class="qtimer" >
+            <div class="qtimer__ring" style="--p:${percent}%" data-quiz-timer-ring>
+              <span class="qtimer__value" data-quiz-timer-value>${quiz.is_paused ? "||" : (quiz.remaining_seconds ?? 0)}</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-weight:700">
+              ${escapeHtml(t("quiz.question_of", { n: quiz.current_number, total: quiz.questions_count }))}
+            </div>
+            <div class="muted" style="font-size:.82rem">
+              ${escapeHtml(t(quiz.phase === "question" ? "admin.quiz.phase_question_hint" : "admin.quiz.phase_standings_hint"))}
+            </div>
+          </div>
+        </div>` : ""}
+
+        <div class="row" style="margin-top:var(--space-3)">
+          <button type="button" class="btn btn--primary" data-act="start">
+            ${escapeHtml(started ? t("admin.quiz.restart") : t("admin.quiz.start"))}</button>
+          ${quiz.phase === "question"
+            ? `<button type="button" class="btn btn--success" data-act="reveal">🏆 ${escapeHtml(t("admin.quiz.reveal_now"))}</button>`
+            : ""}
+          <button type="button" class="btn btn--ghost" data-act="prev">⬅️ ${escapeHtml(t("admin.quiz.prev"))}</button>
+          <button type="button" class="btn btn--ghost" data-act="next">➡️ ${escapeHtml(t("admin.quiz.next"))}</button>
+          ${live ? `
+          <button type="button" class="btn btn--ghost" data-act="${quiz.is_paused ? "resume" : "pause"}">
+            ${escapeHtml(quiz.is_paused ? `▶️ ${t("admin.quiz.resume")}` : `⏸ ${t("admin.quiz.pause")}`)}</button>
+          <button type="button" class="btn btn--ghost" data-extend="15">+15${escapeHtml(t("admin.quiz.sec"))}</button>
+          <button type="button" class="btn btn--ghost" data-extend="30">+30${escapeHtml(t("admin.quiz.sec"))}</button>
+          <button type="button" class="btn btn--ghost" data-extend="-15">−15${escapeHtml(t("admin.quiz.sec"))}</button>` : ""}
+          ${started ? `<button type="button" class="btn btn--ghost" data-act="finish">🏁 ${escapeHtml(t("admin.quiz.finish"))}</button>` : ""}
+        </div>
+
+        <div class="row" style="margin-top:var(--space-3)">
+          <button type="button" class="btn btn--sm ${quiz.is_open ? "btn--danger" : "btn--primary"}" data-toggle>
+            ${escapeHtml(quiz.is_open ? t("admin.quiz.close") : t("admin.quiz.open"))}</button>
+          <button type="button" class="btn btn--sm btn--ghost" data-reset>🔄 ${escapeHtml(t("admin.quiz.reset"))}</button>
+        </div>
+
+        <div class="qpult-settings">
+          <div class="field">
+            <label class="field__label">${escapeHtml(t("admin.quiz.question_seconds"))}</label>
+            <input class="input input--sm input--score" type="number" min="5" max="900"
+                   data-setting="question_seconds" value="${quiz.question_seconds}">
+          </div>
+          <div class="field">
+            <label class="field__label">${escapeHtml(t("admin.quiz.standings_seconds"))}</label>
+            <input class="input input--sm input--score" type="number" min="5" max="900"
+                   data-setting="standings_seconds" value="${quiz.standings_seconds}">
+          </div>
+          <button type="button" class="btn btn--sm btn--primary" data-save-settings>
+            ${escapeHtml(t("common.save"))}</button>
+        </div>
+
+        <div class="row" style="margin-top:var(--space-2); flex-wrap:wrap">
+          <label class="row">
+            <input type="checkbox" data-flag="auto_advance" ${quiz.auto_advance ? "checked" : ""}
+                   style="width:22px;height:22px">
+            <span style="font-size:.85rem">${escapeHtml(t("admin.quiz.auto_advance"))}</span>
+          </label>
+          <label class="row">
+            <input type="checkbox" data-flag="show_results" ${quiz.show_results ? "checked" : ""}
                    style="width:22px;height:22px">
             <span style="font-size:.85rem">${escapeHtml(t("admin.quiz.show_results"))}</span>
           </label>
         </div>
       </div>
+    </div>`;
+}
 
+function quizQuestionCardHtml(row, quiz) {
+  const bars = row.options.map((option, index) => {
+    const count = row.distribution[String(index)] || 0;
+    const percent = row.answers_count ? Math.round((count * 100) / row.answers_count) : 0;
+    const correct = index === row.correct_index;
+    return `
+      <div style="margin-top:6px">
+        <div class="spread" style="font-size:.82rem">
+          <span>${correct ? "✅ " : ""}${escapeHtml(option)}</span>
+          <span class="muted">${count} · ${percent}%</span>
+        </div>
+        <div class="progress"><div class="progress__bar" style="width:${percent}%;
+          ${correct ? "background:linear-gradient(90deg,#34d399,#a7f3d0)" : ""}"></div></div>
+      </div>`;
+  }).join("");
+
+  return `
+    <article class="card ${row.is_current ? "card--current" : ""}">
+      <div class="card__head">
+        <div style="min-width:0">
+          <strong>${row.order}. ${escapeHtml(row.text)}</strong>
+          ${row.is_current ? `<span class="badge badge--accent" style="margin-left:6px">${escapeHtml(t("admin.quiz.current"))}</span>` : ""}
+        </div>
+        <div class="row">
+          <span class="badge badge--info">${escapeHtml(t("admin.quiz.answers_count"))}: ${row.answers_count}</span>
+          <span class="badge badge--success">${escapeHtml(t("admin.quiz.correct_count"))}: ${row.correct_count}</span>
+          <button type="button" class="btn btn--sm btn--ghost" data-goto="${row.index}"
+            ${quiz?.questions_count ? "" : "disabled"}>▶️ ${escapeHtml(t("admin.quiz.goto"))}</button>
+        </div>
+      </div>
+      <div class="card__body">${bars}</div>
+    </article>`;
+}
+
+const quizTab = {
+  stateKeys: ["quiz", "leaderboard"],
+
+  async render() {
+    stopQuizTick();
+    const results = await api.admin.quizResults();
+    const quiz = results.quiz;
+
+    if (!quiz) {
+      content.innerHTML = emptyState("admin.subs.empty", "🧠");
+      return;
+    }
+
+    const rows = (results.rows || []).map((row) => quizQuestionCardHtml(row, quiz)).join("");
+
+    content.innerHTML = `
+      ${quizControlsHtml(quiz)}
       <h3 style="margin-top:var(--space-5)">${escapeHtml(t("admin.quiz.questions"))}</h3>
+      <div class="muted" style="font-size:.82rem; margin-bottom:var(--space-3)">
+        ${escapeHtml(t("admin.quiz.goto_hint"))}
+      </div>
       <div class="stack">${rows || emptyState("admin.subs.empty", "🧠")}</div>`;
+
+    const control = async (action, payload = {}) => {
+      try {
+        await api.admin.quizControl(action, payload);
+        notify.ok(t("admin.quiz.applied"));
+      } catch (error) {
+        notify.err(apiErrorMessage(error));
+      }
+      render();
+    };
+
+    content.querySelectorAll("[data-act]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const action = button.dataset.act;
+        if (action === "start") {
+          const fresh = quiz.phase === "idle"
+            ? true
+            : await confirmDialog(t("admin.quiz.confirm_restart"));
+          if (quiz.phase !== "idle" && !fresh) return;
+          await control("start", { index: 0, reset_answers: quiz.phase !== "idle" });
+          return;
+        }
+        if (action === "finish" && !await confirmDialog(t("admin.quiz.confirm_finish"))) return;
+        await control(action);
+      });
+    });
+
+    content.querySelectorAll("[data-extend]").forEach((button) => {
+      button.addEventListener("click", () => control("extend", {
+        seconds: Number(button.dataset.extend),
+      }));
+    });
+
+    content.querySelectorAll("[data-goto]").forEach((button) => {
+      button.addEventListener("click", () => control("goto", {
+        index: Number(button.dataset.goto),
+      }));
+    });
+
+    content.querySelector("[data-save-settings]").addEventListener("click", async () => {
+      const payload = {};
+      content.querySelectorAll("[data-setting]").forEach((input) => {
+        payload[input.dataset.setting] = Number(input.value || 0);
+      });
+      try {
+        await api.admin.quizSettings(payload);
+        notify.ok(t("admin.quiz.settings_saved"));
+      } catch (error) {
+        notify.err(apiErrorMessage(error));
+      }
+      render();
+    });
+
+    content.querySelectorAll("[data-flag]").forEach((box) => {
+      box.addEventListener("change", async () => {
+        try {
+          await api.admin.quizSettings({ [box.dataset.flag]: box.checked });
+          notify.ok(t("common.saved"));
+        } catch (error) {
+          notify.err(apiErrorMessage(error));
+        }
+        render();
+      });
+    });
 
     content.querySelector("[data-toggle]").addEventListener("click", async (event) => {
       event.target.disabled = true;
       try {
-        const result = await api.admin.toggleQuiz({ is_open: !quiz?.is_open });
+        const result = await api.admin.toggleQuiz({ is_open: !quiz.is_open });
         notify.ok(t(result.quiz.is_open ? "admin.quiz.opened" : "admin.quiz.closed"));
       } catch (error) {
         notify.err(apiErrorMessage(error));
@@ -595,20 +993,13 @@ const quizTab = {
       try {
         await api.admin.resetQuiz();
         notify.ok(t("admin.quiz.reset_done"));
-        render();
       } catch (error) {
         notify.err(apiErrorMessage(error));
       }
+      render();
     });
 
-    content.querySelector("[data-show-results]").addEventListener("change", async (event) => {
-      try {
-        await api.admin.toggleQuiz({ is_open: quiz?.is_open, show_results: event.target.checked });
-        notify.ok(t("common.saved"));
-      } catch (error) {
-        notify.err(apiErrorMessage(error));
-      }
-    });
+    startQuizTick(quiz);
   },
 };
 
@@ -616,7 +1007,7 @@ const quizTab = {
 /* Ответы команд                                                      */
 /* ------------------------------------------------------------------ */
 const submissionsTab = {
-  stateKeys: ["submissions", "tasks"],
+  stateKeys: ["submissions", "tasks", "leaderboard"],
   taskFilter: "",
   teamFilter: "",
 
@@ -644,9 +1035,14 @@ const submissionsTab = {
       .join("");
 
     content.innerHTML = `
-      <div class="row" style="margin-bottom:var(--space-4)">
-        <select class="select select--sm" id="filter-task" style="max-width:260px">${taskOptions}</select>
-        <select class="select select--sm" id="filter-team" style="max-width:260px">${teamOptions}</select>
+      <div class="spread" style="margin-bottom:var(--space-4); gap:var(--space-3)">
+        <div class="row" style="flex:1 1 auto">
+          <select class="select select--sm" id="filter-task" style="max-width:260px">${taskOptions}</select>
+          <select class="select select--sm" id="filter-team" style="max-width:260px">${teamOptions}</select>
+        </div>
+        <button type="button" class="btn btn--sm btn--danger" data-reset-subs
+          ${subs.submissions.length ? "" : "disabled"}>
+          🔄 ${escapeHtml(t("admin.subs.reset_all"))}</button>
       </div>
       <div class="stack">${subs.submissions.length
         ? subs.submissions.map(submissionCardHtml).join("")
@@ -659,6 +1055,17 @@ const submissionsTab = {
     content.querySelector("#filter-team").addEventListener("change", (event) => {
       this.teamFilter = event.target.value;
       render();
+    });
+
+    content.querySelector("[data-reset-subs]").addEventListener("click", async () => {
+      if (!await confirmDialog(t("admin.subs.confirm_reset_all"))) return;
+      try {
+        await api.admin.resetSubmissions();
+        notify.ok(t("admin.subs.reset_done"));
+        render();
+      } catch (error) {
+        notify.err(apiErrorMessage(error));
+      }
     });
 
     content.querySelectorAll("[data-grade]").forEach((button) => {
@@ -674,14 +1081,28 @@ const submissionsTab = {
         }
       });
     });
+
+    content.querySelectorAll("[data-delete-sub]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        if (!await confirmDialog(t("admin.subs.confirm_delete"))) return;
+        try {
+          await api.admin.deleteSubmission(Number(button.dataset.deleteSub));
+          notify.ok(t("admin.subs.deleted"));
+          render();
+        } catch (error) {
+          notify.err(apiErrorMessage(error));
+        }
+      });
+    });
   },
 };
 
 function submissionCardHtml(submission) {
   const media = submission.attachments.map((file) => {
+    const src = fileUrl(file.url);
     const element = file.kind === "video"
-      ? `<video src="${file.url}" controls preload="metadata"></video>`
-      : `<a href="${file.url}" target="_blank" rel="noopener"><img src="${file.url}" alt="" loading="lazy"></a>`;
+      ? `<video src="${src}" controls preload="metadata" playsinline></video>`
+      : `<a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="" loading="lazy"></a>`;
     return `<div class="media-item">${element}
       <div class="media-item__label">${escapeHtml(file.original_name)} · ${formatBytes(file.size_bytes)}</div></div>`;
   }).join("");
@@ -701,6 +1122,8 @@ function submissionCardHtml(submission) {
                  data-points="${submission.id}">
           <button type="button" class="btn btn--sm btn--primary" data-grade="${submission.id}">
             ${escapeHtml(t("admin.subs.grade"))}</button>
+          <button type="button" class="btn btn--sm btn--danger" data-delete-sub="${submission.id}">
+            🗑️ ${escapeHtml(t("admin.subs.delete"))}</button>
         </div>
       </div>
       <div class="card__body">
@@ -714,7 +1137,7 @@ function submissionCardHtml(submission) {
 /* Голоса                                                             */
 /* ------------------------------------------------------------------ */
 const votesTab = {
-  stateKeys: ["votes"],
+  stateKeys: ["votes", "task3"],
 
   async render() {
     const data = await api.admin.allVotes();
@@ -756,6 +1179,31 @@ const votesTab = {
 
       <div class="stack">${sectionRows}</div>
 
+      ${(data.galleries || []).map((gallery) => `
+      <div class="spread" style="margin-top:var(--space-5); margin-bottom:var(--space-3)">
+        <h3 style="margin:0">${escapeHtml(t("admin.votes.projects_n", { n: gallery.task_order }))}</h3>
+      </div>
+      <div class="stack" style="margin-bottom:var(--space-4)">
+        ${gallery.projects.length
+          ? [...gallery.projects].sort((a, b) => b.likes - a.likes || a.team_number - b.team_number).map((project, index) => `
+          <article class="card card--flat spread">
+            <div class="row" style="min-width:0">
+              <span class="badge badge--accent">#${index + 1}</span>
+              <div style="min-width:0">
+                <strong>${escapeHtml(project.title)}</strong>
+                <div class="muted" style="font-size:.78rem">#${String(project.team_number).padStart(2, "0")}</div>
+              </div>
+            </div>
+            <span class="badge badge--info">❤️ ${project.likes}</span>
+          </article>`).join("")
+          : `<div class="muted">${escapeHtml(t("vote.round.empty"))}</div>`}
+      </div>`).join("")}
+      ${data.galleries?.length ? `
+      <div class="row" style="margin-bottom:var(--space-5)">
+        <button type="button" class="btn btn--sm btn--danger" data-reset-likes>
+          🔄 ${escapeHtml(t("admin.votes.reset_likes"))}</button>
+      </div>` : ""}
+
       <h3 style="margin-top:var(--space-5)">${escapeHtml(t("admin.votes.list"))}</h3>
       ${data.votes.length ? `
       <div class="table-wrap">
@@ -776,6 +1224,17 @@ const votesTab = {
       try {
         await api.admin.resetVotes();
         notify.ok(t("admin.votes.reset_done"));
+        render();
+      } catch (error) {
+        notify.err(apiErrorMessage(error));
+      }
+    });
+
+    content.querySelector("[data-reset-likes]")?.addEventListener("click", async () => {
+      if (!await confirmDialog(t("admin.votes.confirm_reset_likes"))) return;
+      try {
+        await api.admin.resetProjectVotes();
+        notify.ok(t("admin.votes.likes_reset"));
         render();
       } catch (error) {
         notify.err(apiErrorMessage(error));
@@ -818,12 +1277,16 @@ const ratingTab = {
       </tr>`).join("");
 
     content.innerHTML = `
-      <div class="spread" style="margin-bottom:var(--space-4)">
+      <div class="spread" style="margin-bottom:var(--space-4); gap:var(--space-3)">
         <div>
           <h3 style="margin:0">${escapeHtml(t("admin.rating.title"))}</h3>
           <div class="muted" style="font-size:.82rem">${escapeHtml(t("admin.rating.hint"))}</div>
         </div>
-        <span class="row"><span class="live-dot"></span> ${escapeHtml(t("common.live"))}</span>
+        <div class="row">
+          <span class="row"><span class="live-dot"></span> ${escapeHtml(t("common.live"))}</span>
+          <button type="button" class="btn btn--sm btn--danger" data-reset-scores>
+            🔄 ${escapeHtml(t("admin.rating.reset_scores"))}</button>
+        </div>
       </div>
 
       ${data.teams.length ? `
@@ -841,18 +1304,182 @@ const ratingTab = {
           <tbody>${rows}</tbody>
         </table>
       </div>` : emptyState("rating.empty", "🏁")}`;
+
+    content.querySelector("[data-reset-scores]")?.addEventListener("click", async () => {
+      if (!await confirmDialog(t("admin.rating.confirm_reset_scores"))) return;
+      try {
+        await api.admin.resetScores();
+        notify.ok(t("admin.rating.scores_reset"));
+        render();
+      } catch (error) {
+        notify.err(apiErrorMessage(error));
+      }
+    });
   },
 };
 
 /* ------------------------------------------------------------------ */
 /* Оболочка                                                           */
 /* ------------------------------------------------------------------ */
+let adminThreadUser = null;
+
+function updateAdminMsgTab(count) {
+  const button = document.querySelector('.tab[data-tab="messages"]');
+  if (!button) return;
+  const label = t("admin.tab.messages");
+  button.textContent = count ? `${label} (${count})` : label;
+}
+
+const messagesTab = {
+  stateKeys: ["messages"],
+
+  async render() {
+    if (adminThreadUser) {
+      await renderAdminThread(adminThreadUser);
+      return;
+    }
+
+    const data = await api.admin.messageThreads();
+    updateAdminMsgTab(data.unread || 0);
+
+    const rows = (data.threads || []).map((thread) => `
+      <button type="button" class="card card--flat chat-thread ${thread.unread ? "has-unread" : ""}" data-open-thread="${thread.user_id}">
+        <div class="spread">
+          <div style="min-width:0; text-align:left">
+            <strong>${escapeHtml(thread.display_name || thread.login)}</strong>
+            <div class="muted" style="font-size:.78rem">
+              ${escapeHtml(thread.login)} · ${escapeHtml(roleLabel(thread.role))}
+              ${thread.team_name ? ` · ${escapeHtml(thread.team_name)}` : ""}
+            </div>
+            <div class="muted" style="margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
+              ${escapeHtml(thread.last_body)}
+            </div>
+          </div>
+          <div class="stack" style="justify-items:end">
+            ${thread.unread ? `<span class="badge badge--accent">${thread.unread}</span>` : ""}
+            <span class="muted" style="font-size:.72rem">${escapeHtml(formatTime(thread.last_at))}</span>
+          </div>
+        </div>
+      </button>`).join("");
+
+    content.innerHTML = `
+      <div class="spread" style="margin-bottom:var(--space-4); gap:var(--space-3)">
+        <div>
+          <h3 style="margin:0">💬 ${escapeHtml(t("admin.messages.title"))}</h3>
+          <div class="muted" style="font-size:.82rem">${escapeHtml(t("admin.messages.hint"))}</div>
+        </div>
+        <div class="row" style="flex-wrap:wrap; justify-content:flex-end">
+          <span class="badge badge--info">${data.unread || 0} ${escapeHtml(t("admin.messages.unread"))}</span>
+          <button type="button" class="btn btn--sm btn--danger" data-reset-chats>
+            ${escapeHtml(t("admin.messages.reset_all"))}</button>
+        </div>
+      </div>
+      <div class="stack">${rows || emptyState("admin.messages.empty", "💬")}</div>`;
+
+    content.querySelectorAll("[data-open-thread]").forEach((button) => {
+      button.addEventListener("click", () => {
+        adminThreadUser = Number(button.dataset.openThread);
+        render();
+      });
+    });
+
+    content.querySelector("[data-reset-chats]")?.addEventListener("click", async () => {
+      if (!await confirmDialog(t("admin.messages.confirm_reset_all"))) return;
+      try {
+        await api.admin.resetMessages();
+        adminThreadUser = null;
+        notify.ok(t("admin.messages.reset_done"));
+        render();
+      } catch (error) {
+        notify.err(apiErrorMessage(error));
+      }
+    });
+  },
+};
+
+async function renderAdminThread(userId) {
+  const data = await api.admin.messageThread(userId);
+  const person = data.user;
+  const myId = store.user?.id;
+  const bubbles = (data.messages || []).map((row) => {
+    const mine = row.author_id === myId || row.author_role === "admin";
+    const name = row.author_role === "admin"
+      ? t("messages.admin")
+      : (row.author_name || row.author_login);
+    return `
+      <div class="chat-row ${mine ? "is-mine" : ""}">
+        <div class="chat-bubble">
+          <div class="chat-bubble__meta">${escapeHtml(name)} · ${escapeHtml(formatTime(row.created_at))}</div>
+          <div class="chat-bubble__text">${escapeHtml(row.body)}</div>
+        </div>
+      </div>`;
+  }).join("");
+
+  content.innerHTML = `
+    <div class="row" style="margin-bottom:var(--space-3)">
+      <button type="button" class="btn btn--sm btn--ghost" data-back-threads>← ${escapeHtml(t("admin.messages.back"))}</button>
+    </div>
+    <div class="card chat">
+      <div class="spread" style="margin-bottom:var(--space-3)">
+        <div>
+          <strong>${escapeHtml(person.display_name || person.login)}</strong>
+          <div class="muted" style="font-size:.78rem">
+            ${escapeHtml(person.login)} · ${escapeHtml(roleLabel(person.role))}
+            ${person.team_name ? ` · ${escapeHtml(person.team_name)}` : ""}
+          </div>
+          ${person.school || person.grade || person.about ? `
+          <div class="muted" style="font-size:.78rem; margin-top:4px">
+            ${escapeHtml([person.school, person.grade].filter(Boolean).join(" · "))}
+            ${person.about ? `<br>${escapeHtml(person.about)}` : ""}
+          </div>` : ""}
+        </div>
+      </div>
+      <div class="chat__list" id="admin-chat-list">
+        ${bubbles || `<div class="empty">${escapeHtml(t("messages.empty_thread"))}</div>`}
+      </div>
+      <div class="chat__composer">
+        <textarea class="textarea" id="admin-msg-input" rows="2" maxlength="1000"
+                  placeholder="${escapeHtml(t("admin.messages.reply_ph"))}"></textarea>
+        <button type="button" class="btn btn--primary" data-admin-send>${escapeHtml(t("common.send"))}</button>
+      </div>
+    </div>`;
+
+  const list = content.querySelector("#admin-chat-list");
+  list.scrollTop = list.scrollHeight;
+
+  content.querySelector("[data-back-threads]").addEventListener("click", () => {
+    adminThreadUser = null;
+    render();
+  });
+
+  const send = async () => {
+    const input = content.querySelector("#admin-msg-input");
+    const text = input.value.trim();
+    if (!text) return;
+    try {
+      await api.admin.replyMessage(userId, text);
+      input.value = "";
+      await renderAdminThread(userId);
+    } catch (error) {
+      notify.err(apiErrorMessage(error));
+    }
+  };
+  content.querySelector("[data-admin-send]").addEventListener("click", send);
+  content.querySelector("#admin-msg-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      send();
+    }
+  });
+}
+
 const TABS = {
   overview: overviewTab,
   teams: teamsTab,
   tasks: tasksTab,
   quiz: quizTab,
   submissions: submissionsTab,
+  messages: messagesTab,
   votes: votesTab,
   rating: ratingTab,
 };
@@ -870,6 +1497,7 @@ async function render() {
 
 async function activate(tabId) {
   if (!TABS[tabId]) tabId = "overview";
+  stopQuizTick();
   activeTab = tabId;
   localStorage.setItem(TAB_KEY, tabId);
   document.querySelectorAll(".tab").forEach((button) => {
@@ -917,8 +1545,9 @@ async function activate(tabId) {
 
   // Автообновление активной вкладки при изменениях на сервере.
   subscribe(
-    ["teams", "tasks", "votes", "quiz", "leaderboard", "submissions"],
+    ["teams", "tasks", "votes", "quiz", "leaderboard", "submissions", "messages", "task3"],
     (key) => {
+      if (key === "messages") updateAdminMsgTab(store.unreadMessages || 0);
       if (TABS[activeTab]?.stateKeys.includes(key)) render();
     },
   );

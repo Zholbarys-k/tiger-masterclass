@@ -6,6 +6,7 @@ from flask import Blueprint, current_app, g, request, send_from_directory
 from ..auth import require_auth, require_role
 from ..db import db
 from ..models import (
+    PHASE_T3_RUNNING,
     ROLE_ADMIN,
     ROLE_LEADER,
     Attachment,
@@ -23,6 +24,8 @@ bp = Blueprint("tasks", __name__, url_prefix="/api")
 @require_auth
 def list_tasks():
     """Лента заданий. Участники и лидеры видят только опубликованные."""
+    from ..task3_engine import ensure_progress, get_rounds
+
     lang = current_lang()
     query = db.session.query(Task)
     if g.user.role != ROLE_ADMIN:
@@ -34,13 +37,33 @@ def list_tasks():
         rows = db.session.query(Submission).filter_by(team_id=g.user.team_id).all()
         my_subs = {row.task_id: row.to_dict(lang) for row in rows}
 
+    rounds = get_rounds()
+    ensure_progress()
+    rounds_map = {row.task_id: row.to_dict() for row in rounds if row.task_id}
+
     payload = []
+    is_admin = g.user.role == ROLE_ADMIN
     for task in tasks:
         item = task.to_dict(lang)
         item["my_submission"] = my_subs.get(task.id)
+        item["round"] = rounds_map.get(task.id)
+        hidden = (
+            not is_admin
+            and item["round"] is not None
+            and item["round"]["phase"] != PHASE_T3_RUNNING
+        )
+        item["content_hidden"] = hidden
+        if hidden:
+            item["title"] = ""
+            item["body"] = ""
         payload.append(item)
 
-    return json_ok(tasks=payload, can_submit=g.user.role == ROLE_LEADER)
+    return json_ok(
+        tasks=payload,
+        can_submit=g.user.role == ROLE_LEADER,
+        rounds=rounds_map,
+        task3=next((row.to_dict() for row in rounds if row.task_order == 3), None),
+    )
 
 
 @bp.get("/submissions/mine")
@@ -65,6 +88,19 @@ def submit(task_id: int):
         return json_err("task_not_found", "Задание не найдено", 404)
     if not g.user.team_id:
         return json_err("no_team", "Пользователь не привязан к команде", 400)
+
+    from ..task3_engine import ensure_progress, get_round, needs_round
+
+    if needs_round(task):
+        round_ = get_round(task.id)
+        if round_ is not None:
+            ensure_progress(round_)
+            if not round_.can_submit:
+                return json_err(
+                    "task_closed",
+                    f"Время задания №{task.order} вышло. Ответы больше не принимаются",
+                    400,
+                )
 
     text = (request.form.get("text") or "").strip()
     files = [f for f in request.files.getlist("files") if f and f.filename]
@@ -140,7 +176,20 @@ def serve_file(submission_id: int, stored_name: str):
     if submission is None:
         return json_err("not_found", "Файл не найден", 404)
     if g.user.role != ROLE_ADMIN and submission.team_id != g.user.team_id:
-        return json_err("forbidden", "Нет доступа к этому файлу", 403)
+        from ..task3_engine import files_public_for
+
+        if not files_public_for(submission):
+            return json_err("forbidden", "Нет доступа к этому файлу", 403)
 
     folder = current_app.config["UPLOAD_DIR"] / str(submission_id)
-    return send_from_directory(folder, stored_name)
+    attachment = next(
+        (row for row in submission.attachments if row.stored_name == stored_name),
+        None,
+    )
+    return send_from_directory(
+        folder,
+        stored_name,
+        mimetype=attachment.mime if attachment and attachment.mime else None,
+        as_attachment=False,
+        max_age=3600,
+    )

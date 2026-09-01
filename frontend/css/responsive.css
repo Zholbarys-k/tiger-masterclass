@@ -11,6 +11,9 @@
   .nav-btn { font-size: 0.75rem; }
   .board-row { grid-template-columns: 52px 1fr auto; }
   .media-item img, .media-item video { height: 150px; }
+  .qtimer__ring { width: 76px; height: 76px; }
+  .qtimer__value { font-size: 1.6rem; }
+  .qtimer__label { font-size: 0.7rem; max-width: 100px; }
 }
 
 /* ---------- Ноутбуки и ПК: боковое меню ---------- */
@@ -94,6 +97,10 @@
   .brand__sub { display: none; }
   .board-row { grid-template-columns: 36px 1fr auto; gap: var(--space-2); }
   .board-row__points { font-size: 1.1rem; }
+  .quiz-head .page__title { font-size: 1.05rem; }
+  .qtimer__label { display: none; }
+  #logout-btn span { display: none; }
+  .brand__sub { max-width: 28vw; }
 }
 
 /* ---------- Печать ---------- */

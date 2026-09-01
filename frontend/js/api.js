@@ -33,6 +33,14 @@ export const auth = {
   },
 };
 
+/** URL файла с токеном: <img> и <video> не умеют слать Authorization. */
+export function fileUrl(path) {
+  if (!path) return "";
+  if (!auth.token) return path;
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}token=${encodeURIComponent(auth.token)}`;
+}
+
 export class ApiError extends Error {
   constructor(message, code, status) {
     super(message);
@@ -133,6 +141,12 @@ export const api = {
   login: (login, password) => request("/api/auth/login", { method: "POST", json: { login, password } }),
   logout: () => request("/api/auth/logout", { method: "POST" }),
   me: () => request("/api/auth/me"),
+  updateProfile: (payload) => request("/api/auth/profile", { method: "PATCH", json: payload }),
+  messages: () => request("/api/messages"),
+  sendMessage: (body) => request("/api/messages", { method: "POST", json: { body } }),
+  teamMessages: () => request("/api/team/messages"),
+  sendTeamMessage: (body) => request("/api/team/messages", { method: "POST", json: { body } }),
+  clearTeamChat: () => request("/api/team/messages", { method: "DELETE" }),
 
   // --- общее состояние ---
   state: (signal) => request("/api/state", { signal }),
@@ -148,6 +162,9 @@ export const api = {
   // --- голосование ---
   sections: () => request("/api/sections"),
   vote: (sectionId) => request("/api/votes", { method: "POST", json: { section_id: sectionId } }),
+  projects: () => request("/api/projects"),
+  likeProject: (submissionId) =>
+    request("/api/projects/like", { method: "POST", json: { submission_id: submissionId } }),
 
   // --- тест ---
   quizState: () => request("/api/quiz/state"),
@@ -177,12 +194,21 @@ export const api = {
         method: "PATCH",
         json: { points },
       }),
+    deleteSubmission: (submissionId) =>
+      request(`/api/admin/submissions/${submissionId}`, { method: "DELETE" }),
+    resetSubmissions: (payload = {}) =>
+      request("/api/admin/submissions/reset", { method: "POST", json: payload }),
+    resetScores: () => request("/api/admin/scores/reset", { method: "POST" }),
     tasks: () => request("/api/admin/tasks"),
     createTask: (payload) => request("/api/admin/tasks", { method: "POST", json: payload }),
     updateTask: (taskId, payload) =>
       request(`/api/admin/tasks/${taskId}`, { method: "PATCH", json: payload }),
     deleteTask: (taskId) => request(`/api/admin/tasks/${taskId}`, { method: "DELETE" }),
     toggleQuiz: (payload) => request("/api/admin/quiz/toggle", { method: "POST", json: payload }),
+    quizControl: (action, payload = {}) =>
+      request("/api/admin/quiz/control", { method: "POST", json: { action, ...payload } }),
+    quizSettings: (payload) =>
+      request("/api/admin/quiz/settings", { method: "POST", json: payload }),
     resetQuiz: () => request("/api/admin/quiz/reset", { method: "POST" }),
     quizResults: () => request("/api/quiz/results"),
     quizQuestions: () => request("/api/admin/quiz/questions"),
@@ -190,5 +216,16 @@ export const api = {
     updateSection: (sectionId, payload) =>
       request(`/api/admin/sections/${sectionId}`, { method: "PATCH", json: payload }),
     resetVotes: () => request("/api/admin/votes/reset", { method: "POST" }),
+    rounds: () => request("/api/admin/rounds"),
+    roundControl: (taskId, action, payload = {}) =>
+      request(`/api/admin/rounds/${taskId}/control`, { method: "POST", json: { action, ...payload } }),
+    roundSettings: (taskId, payload) =>
+      request(`/api/admin/rounds/${taskId}/settings`, { method: "POST", json: payload }),
+    resetProjectVotes: () => request("/api/admin/projects/reset", { method: "POST" }),
+    messageThreads: () => request("/api/admin/messages"),
+    messageThread: (userId) => request(`/api/admin/messages/${userId}`),
+    replyMessage: (userId, body) =>
+      request(`/api/admin/messages/${userId}`, { method: "POST", json: { body } }),
+    resetMessages: () => request("/api/admin/messages/reset", { method: "POST" }),
   },
 };
