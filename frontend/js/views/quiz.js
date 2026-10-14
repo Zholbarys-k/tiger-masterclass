@@ -1,6 +1,6 @@
 /* Синхронный тест: один вопрос у всех, таймер, ожидание, рейтинг команд. */
 
-import { api } from "../api.js";
+import { api, fileUrl } from "../api.js";
 import { t } from "../i18n.js";
 import { store } from "../store.js";
 import { apiErrorMessage, escapeHtml, loaderBlock, notify, rankMedal } from "../ui.js";
@@ -143,6 +143,7 @@ function questionCardHtml(data) {
           <div class="muted" style="font-size:.75rem">${question.points} ${escapeHtml(t("common.pts"))}</div>
         </div>
       </div>
+      ${question.image_url ? `<img class="content-image" src="${fileUrl(question.image_url)}" alt="">` : ""}
       <div class="options">
         ${question.options.map((option, index) => optionHtml(question, option, index, data)).join("")}
       </div>

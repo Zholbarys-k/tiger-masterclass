@@ -29,7 +29,7 @@ def print_banner() -> None:
         admins = db.session.query(User).filter_by(role=ROLE_ADMIN).count()
 
     print("\n" + "=" * 62)
-    print("  TIGER MASTERCLASS")
+    print("  ЖАС УСТАЗ")
     print("=" * 62)
     print(f"  Команд: {teams}   Аккаунтов: {users}   Админов: {admins}")
     if users == 0:

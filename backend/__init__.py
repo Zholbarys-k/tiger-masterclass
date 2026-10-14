@@ -76,6 +76,12 @@ NEW_COLUMNS: dict[str, dict[str, str]] = {
     "task_rounds": {
         "task_id": "INTEGER",
     },
+    "tasks": {
+        "image": "VARCHAR(255) NOT NULL DEFAULT ''",
+    },
+    "questions": {
+        "image": "VARCHAR(255) NOT NULL DEFAULT ''",
+    },
     "project_votes": {
         "task_id": "INTEGER",
     },

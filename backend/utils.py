@@ -87,6 +87,41 @@ def save_upload(storage: FileStorage, submission_id: int) -> dict:
     }
 
 
+MEDIA_FOLDER = "media"
+
+
+def validate_image(storage: FileStorage) -> tuple[bool, str]:
+    """Проверить, что файл — изображение до 15 МБ (для фото к заданиям и вопросам)."""
+    valid, message = validate_file(storage)
+    if not valid:
+        return valid, message
+    mime = (storage.mimetype or "").lower()
+    ext = file_ext(storage.filename)
+    if not mime.startswith("image/") and ext not in current_app.config["ALLOWED_IMAGE_EXT"]:
+        return False, "Можно загрузить только изображение"
+    if ext and ext not in current_app.config["ALLOWED_IMAGE_EXT"]:
+        return False, "Можно загрузить только изображение"
+    return True, ""
+
+
+def save_media(storage: FileStorage) -> str:
+    """Сохранить картинку в uploads/media/<uuid>.<ext> и вернуть имя файла."""
+    folder: Path = current_app.config["UPLOAD_DIR"] / MEDIA_FOLDER
+    folder.mkdir(parents=True, exist_ok=True)
+    ext = file_ext(storage.filename)
+    stored_name = f"{uuid.uuid4().hex}{('.' + ext) if ext else ''}"
+    storage.stream.seek(0)
+    storage.save(folder / stored_name)
+    return stored_name
+
+
+def remove_media(stored_name: str | None) -> None:
+    if not stored_name:
+        return
+    path: Path = current_app.config["UPLOAD_DIR"] / MEDIA_FOLDER / Path(stored_name).name
+    path.unlink(missing_ok=True)
+
+
 def localized_payload(prefix: str, source: dict) -> dict:
     """Собрать поля prefix_kk/ru/en из входного JSON, дополняя пустые языки."""
     values = {code: (source.get(f"{prefix}_{code}") or "").strip() for code in LANGUAGES}

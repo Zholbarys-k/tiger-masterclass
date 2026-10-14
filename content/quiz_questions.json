@@ -1,201 +1,431 @@
 {
-  "title_kk": "Ғылым және технология тесті",
-  "title_ru": "Тест по науке и технологиям",
-  "title_en": "Science & Technology Quiz",
+  "title_kk": "Математикалық викторина",
+  "title_ru": "Математическая викторина",
+  "title_en": "Math Quiz",
   "questions": [
     {
       "points": 2,
-      "correct_index": 1,
-      "text_kk": "Судың химиялық формуласы қандай?",
-      "text_ru": "Какова химическая формула воды?",
-      "text_en": "What is the chemical formula of water?",
-      "options_kk": ["CO2", "H2O", "O2", "NaCl"],
-      "options_ru": ["CO2", "H2O", "O2", "NaCl"],
-      "options_en": ["CO2", "H2O", "O2", "NaCl"]
-    },
-    {
-      "points": 2,
-      "correct_index": 2,
-      "text_kk": "Компьютердің «миы» деп аталатын құрылғы қалай аталады?",
-      "text_ru": "Какое устройство называют «мозгом» компьютера?",
-      "text_en": "Which device is called the \"brain\" of a computer?",
-      "options_kk": ["Монитор", "Жедел жады (RAM)", "Процессор (CPU)", "Қатты диск"],
-      "options_ru": ["Монитор", "Оперативная память (RAM)", "Процессор (CPU)", "Жёсткий диск"],
-      "options_en": ["Monitor", "RAM", "Processor (CPU)", "Hard drive"]
-    },
-    {
-      "points": 2,
       "correct_index": 0,
-      "text_kk": "Күн жүйесіндегі ең үлкен планета қайсы?",
-      "text_ru": "Какая планета Солнечной системы самая большая?",
-      "text_en": "Which planet in the Solar System is the largest?",
-      "options_kk": ["Юпитер", "Сатурн", "Жер", "Марс"],
-      "options_ru": ["Юпитер", "Сатурн", "Земля", "Марс"],
-      "options_en": ["Jupiter", "Saturn", "Earth", "Mars"]
-    },
-    {
-      "points": 2,
-      "correct_index": 1,
-      "text_kk": "Екілік санау жүйесінде қандай цифрлар қолданылады?",
-      "text_ru": "Какие цифры используются в двоичной системе счисления?",
-      "text_en": "Which digits are used in the binary number system?",
-      "options_kk": ["0-9", "0 және 1", "1-2", "A-F"],
-      "options_ru": ["0-9", "0 и 1", "1-2", "A-F"],
-      "options_en": ["0-9", "0 and 1", "1-2", "A-F"]
-    },
-    {
-      "points": 2,
-      "correct_index": 2,
-      "text_kk": "Өсімдіктер жарық энергиясын пайдаланып қоректік зат жасау процесі қалай аталады?",
-      "text_ru": "Как называется процесс, при котором растения создают питательные вещества с помощью света?",
-      "text_en": "What is the process by which plants make nutrients using light called?",
-      "options_kk": ["Тыныс алу", "Диффузия", "Фотосинтез", "Осмос"],
-      "options_ru": ["Дыхание", "Диффузия", "Фотосинтез", "Осмос"],
-      "options_en": ["Respiration", "Diffusion", "Photosynthesis", "Osmosis"]
-    },
-    {
-      "points": 2,
-      "correct_index": 3,
-      "text_kk": "1 килобайт нешеге тең?",
-      "text_ru": "Чему равен 1 килобайт?",
-      "text_en": "How many bytes are in 1 kilobyte?",
-      "options_kk": ["100 бит", "10 байт", "1000 бит", "1024 байт"],
-      "options_ru": ["100 бит", "10 байт", "1000 бит", "1024 байта"],
-      "options_en": ["100 bits", "10 bytes", "1000 bits", "1024 bytes"]
-    },
-    {
-      "points": 2,
-      "correct_index": 0,
-      "text_kk": "Жарықтың вакуумдегі жылдамдығы шамамен қанша?",
-      "text_ru": "Какова примерная скорость света в вакууме?",
-      "text_en": "What is the approximate speed of light in a vacuum?",
-      "options_kk": ["300 000 км/с", "3 000 км/с", "30 000 км/с", "3 000 000 км/с"],
-      "options_ru": ["300 000 км/с", "3 000 км/с", "30 000 км/с", "3 000 000 км/с"],
-      "options_en": ["300,000 km/s", "3,000 km/s", "30,000 km/s", "3,000,000 km/s"]
-    },
-    {
-      "points": 2,
-      "correct_index": 1,
-      "text_kk": "Адам ағзасындағы ең үлкен ішкі ағза қайсы?",
-      "text_ru": "Какой самый крупный внутренний орган человека?",
-      "text_en": "What is the largest internal organ of the human body?",
-      "options_kk": ["Жүрек", "Бауыр", "Өкпе", "Бүйрек"],
-      "options_ru": ["Сердце", "Печень", "Лёгкие", "Почки"],
-      "options_en": ["Heart", "Liver", "Lungs", "Kidneys"]
-    },
-    {
-      "points": 2,
-      "correct_index": 2,
-      "text_kk": "Алгоритм дегеніміз не?",
-      "text_ru": "Что такое алгоритм?",
-      "text_en": "What is an algorithm?",
+      "text_kk": "Қай математик циркуль мен сызғыштың көмегімен дұрыс көпбұрыштарды салу мүмкіндігі мен Ферма жай сандары арасындағы байланысты орнатты?",
+      "text_ru": "Кто из математиков установил связь между возможностью построения правильных многоугольников с помощью циркуля и линейки и простыми числами Ферма?",
+      "text_en": "Which mathematician established the connection between the constructibility of regular polygons with compass and straightedge and Fermat primes?",
       "options_kk": [
-        "Компьютер бөлшегі",
-        "Бағдарламалау тілі",
-        "Нақты әрекеттердің реттелген тізбегі",
-        "Интернет желісі"
+        "Карл Фридрих Гаусс",
+        "Эварист Галуа",
+        "Николай Лобачевский",
+        "Леонард Эйлер"
       ],
       "options_ru": [
-        "Деталь компьютера",
-        "Язык программирования",
-        "Упорядоченная последовательность точных действий",
-        "Сеть интернет"
+        "Карл Фридрих Гаусс",
+        "Эварист Галуа",
+        "Николай Лобачевский",
+        "Леонард Эйлер"
       ],
       "options_en": [
-        "A computer part",
-        "A programming language",
-        "An ordered sequence of precise steps",
-        "An internet network"
+        "Carl Friedrich Gauss",
+        "Évariste Galois",
+        "Nikolai Lobachevsky",
+        "Leonhard Euler"
+      ]
+    },
+    {
+      "points": 2,
+      "correct_index": 2,
+      "text_kk": "Санды 20%-ға арттырды, содан кейін шыққан нәтижені 20%-ға азайтты. Бастапқы сан қалай өзгерді?",
+      "text_ru": "Число увеличили на 20%, а затем полученный результат уменьшили на 20%. Как изменилось исходное число?",
+      "text_en": "A number was increased by 20%, and then the result was decreased by 20%. How did the original number change?",
+      "options_kk": [
+        "4%-ға артты",
+        "Өзгерген жоқ",
+        "4%-ға азайды",
+        "10%-ға азайды"
+      ],
+      "options_ru": [
+        "Увеличилось на 4%",
+        "Не изменилось",
+        "Уменьшилось на 4%",
+        "Уменьшилось на 10%"
+      ],
+      "options_en": [
+        "Increased by 4%",
+        "Did not change",
+        "Decreased by 4%",
+        "Decreased by 10%"
+      ]
+    },
+    {
+      "points": 2,
+      "correct_index": 0,
+      "text_kk": "Натурал логарифмдердің негізі үшін әйгілі «e» белгісінің авторы болып қай математик саналады?",
+      "text_ru": "Какой математик считается автором знаменитого обозначения «e» для основания натуральных логарифмов?",
+      "text_en": "Which mathematician is considered the author of the famous notation “e” for the base of natural logarithms?",
+      "options_kk": [
+        "Леонард Эйлер",
+        "Готфрид Вильгельм Лейбниц",
+        "Исаак Ньютон",
+        "Иоганн Бернулли"
+      ],
+      "options_ru": [
+        "Леонард Эйлер",
+        "Готфрид Вильгельм Лейбниц",
+        "Исаак Ньютон",
+        "Иоганн Бернулли"
+      ],
+      "options_en": [
+        "Leonhard Euler",
+        "Gottfried Wilhelm Leibniz",
+        "Isaac Newton",
+        "Johann Bernoulli"
+      ]
+    },
+    {
+      "points": 2,
+      "correct_index": 1,
+      "text_kk": "Тақтаға 123456789 саны жазылған. Цифрлардың ретін өзгертпей және тек «+» пен «−» таңбаларын қолданып, қандай өрнек 100 береді?",
+      "text_ru": "На доске записано число 123456789. Не меняя порядок цифр и используя только знаки «+» и «−», какое выражение даёт 100?",
+      "text_en": "The number 123456789 is written on the board. Without changing the order of the digits and using only the signs “+” and “−”, which expression gives 100?",
+      "options_kk": [
+        "123 + 45 − 67 − 89",
+        "123 − 45 − 67 + 89",
+        "12 + 34 + 5 + 6 + 7 + 8 + 9",
+        "123 − 4 − 5 − 6 − 7 − 8 + 9"
+      ],
+      "options_ru": [
+        "123 + 45 − 67 − 89",
+        "123 − 45 − 67 + 89",
+        "12 + 34 + 5 + 6 + 7 + 8 + 9",
+        "123 − 4 − 5 − 6 − 7 − 8 + 9"
+      ],
+      "options_en": [
+        "123 + 45 − 67 − 89",
+        "123 − 45 − 67 + 89",
+        "12 + 34 + 5 + 6 + 7 + 8 + 9",
+        "123 − 4 − 5 − 6 − 7 − 8 + 9"
+      ]
+    },
+    {
+      "points": 2,
+      "correct_index": 2,
+      "text_kk": "«Функция» терминін математикалық қолданысқа бірінші болып қай математик енгізді?",
+      "text_ru": "Какой математик первым ввёл термин «функция» в математическое употребление?",
+      "text_en": "Which mathematician was the first to introduce the term “function” into mathematical use?",
+      "options_kk": [
+        "Пьер Ферма",
+        "Леонард Эйлер",
+        "Готфрид Вильгельм Лейбниц",
+        "Исаак Ньютон"
+      ],
+      "options_ru": [
+        "Пьер Ферма",
+        "Леонард Эйлер",
+        "Готфрид Вильгельм Лейбниц",
+        "Исаак Ньютон"
+      ],
+      "options_en": [
+        "Pierre de Fermat",
+        "Leonhard Euler",
+        "Gottfried Wilhelm Leibniz",
+        "Isaac Newton"
       ]
     },
     {
       "points": 2,
       "correct_index": 3,
-      "text_kk": "Гравитация заңын кім тұжырымдады?",
-      "text_ru": "Кто сформулировал закон всемирного тяготения?",
-      "text_en": "Who formulated the law of universal gravitation?",
-      "options_kk": ["Альберт Эйнштейн", "Никола Тесла", "Галилей", "Исаак Ньютон"],
-      "options_ru": ["Альберт Эйнштейн", "Никола Тесла", "Галилей", "Исаак Ньютон"],
-      "options_en": ["Albert Einstein", "Nikola Tesla", "Galileo", "Isaac Newton"]
+      "text_kk": "Төртбұрышты үстелдің бір бұрышын түзу кесіндімен кесіп алды. Пайда болған фигурада неше бұрыш болды?",
+      "text_ru": "У квадратного стола отпилили один угол прямым разрезом. Сколько углов стало у получившейся фигуры?",
+      "text_en": "One corner of a square table was sawn off with a straight cut. How many corners does the resulting shape have?",
+      "options_kk": [
+        "3",
+        "4",
+        "6",
+        "5"
+      ],
+      "options_ru": [
+        "3",
+        "4",
+        "6",
+        "5"
+      ],
+      "options_en": [
+        "3",
+        "4",
+        "6",
+        "5"
+      ]
     },
     {
       "points": 2,
       "correct_index": 0,
-      "text_kk": "«ИИ» (AI) аббревиатурасы нені білдіреді?",
-      "text_ru": "Что означает аббревиатура «ИИ» (AI)?",
-      "text_en": "What does the abbreviation \"AI\" mean?",
-      "options_kk": ["Жасанды интеллект", "Ақпараттық индекс", "Автоматты интерфейс", "Интернет инженериясы"],
-      "options_ru": ["Искусственный интеллект", "Информационный индекс", "Автоматический интерфейс", "Интернет-инженерия"],
-      "options_en": ["Artificial Intelligence", "Applied Index", "Automatic Interface", "Advanced Internet"]
-    },
-    {
-      "points": 2,
-      "correct_index": 1,
-      "text_kk": "Тірі ағзаның тұқым қуалау ақпараты қай молекулада сақталады?",
-      "text_ru": "В какой молекуле хранится наследственная информация организма?",
-      "text_en": "Which molecule stores an organism's hereditary information?",
-      "options_kk": ["Ақуыз", "ДНҚ", "Глюкоза", "Липид"],
-      "options_ru": ["Белок", "ДНК", "Глюкоза", "Липид"],
-      "options_en": ["Protein", "DNA", "Glucose", "Lipid"]
+      "text_kk": "1900 жылы Парижде өткен Халықаралық математиктер конгресінде ұсынылған әйгілі «23 мәселені» қай математик тұжырымдады?",
+      "text_ru": "Кто из математиков сформулировал знаменитые «23 проблемы», представленные на Международном конгрессе математиков в Париже в 1900 году?",
+      "text_en": "Which mathematician formulated the famous “23 problems” presented at the International Congress of Mathematicians in Paris in 1900?",
+      "options_kk": [
+        "Давид Гильберт",
+        "Анри Пуанкаре",
+        "Огюстен Коши",
+        "Бернхард Риман"
+      ],
+      "options_ru": [
+        "Давид Гильберт",
+        "Анри Пуанкаре",
+        "Огюстен Коши",
+        "Бернхард Риман"
+      ],
+      "options_en": [
+        "David Hilbert",
+        "Henri Poincaré",
+        "Augustin Cauchy",
+        "Bernhard Riemann"
+      ]
     },
     {
       "points": 2,
       "correct_index": 2,
-      "text_kk": "Робототехникада сенсор не үшін қажет?",
-      "text_ru": "Для чего в робототехнике нужен датчик (сенсор)?",
-      "text_en": "What is a sensor used for in robotics?",
+      "text_kk": "Сізде 1-ден 100-ге дейін нөмірленген 100 сөніп тұрған шам бар. Алдымен әр шамның қосқышын ауыстырады, содан кейін әр екінші шамның, одан кейін әр үшінші шамның және т.б. 100-ші шамға дейін. Қандай шамдар жанып қалады?",
+      "text_ru": "У вас есть 100 выключенных лампочек, пронумерованных от 1 до 100. Сначала переключают каждую лампочку, затем каждую вторую, потом каждую третью и так далее до 100-й. Какие лампочки останутся включёнными?",
+      "text_en": "You have 100 switched-off light bulbs numbered from 1 to 100. First, every bulb is toggled, then every second bulb, then every third one, and so on up to the 100th. Which bulbs will remain on?",
       "options_kk": [
-        "Роботты әшекейлеу үшін",
-        "Қуат беру үшін",
-        "Ортадан ақпарат жинау үшін",
-        "Дыбыс шығару үшін"
+        "Нөмірлері жұп барлық шамдар",
+        "Нөмірлері жай сан болатын шамдар",
+        "Нөмірлері толық квадрат болатын шамдар",
+        "Нөмірлері 10-ға еселі шамдар"
       ],
       "options_ru": [
-        "Для украшения робота",
-        "Для питания робота",
-        "Для сбора информации об окружающей среде",
-        "Для воспроизведения звука"
+        "Все лампочки с чётными номерами",
+        "Лампочки с простыми номерами",
+        "Лампочки с номерами, являющимися полными квадратами",
+        "Лампочки с номерами, кратными 10"
       ],
       "options_en": [
-        "To decorate the robot",
-        "To power the robot",
-        "To collect data about the environment",
-        "To play sound"
+        "All bulbs with even numbers",
+        "Bulbs with prime numbers",
+        "Bulbs whose numbers are perfect squares",
+        "Bulbs whose numbers are multiples of 10"
+      ]
+    },
+    {
+      "points": 2,
+      "correct_index": 1,
+      "text_kk": "Трансценденттік сандар жиынының қуаты континуумға тең екенін қай математик дәлелдеді?",
+      "text_ru": "Кто из математиков доказал, что множество трансцендентных чисел имеет мощность континуума?",
+      "text_en": "Which mathematician proved that the set of transcendental numbers has the cardinality of the continuum?",
+      "options_kk": [
+        "Жозеф Лиувилль",
+        "Георг Кантор",
+        "Курт Гедель",
+        "Рихард Дедекинд"
+      ],
+      "options_ru": [
+        "Жозеф Лиувилль",
+        "Георг Кантор",
+        "Курт Гёдель",
+        "Рихард Дедекинд"
+      ],
+      "options_en": [
+        "Joseph Liouville",
+        "Georg Cantor",
+        "Kurt Gödel",
+        "Richard Dedekind"
       ]
     },
     {
       "points": 2,
       "correct_index": 3,
-      "text_kk": "Судың қалыпты атмосфералық қысымда қайнау температурасы қанша?",
-      "text_ru": "При какой температуре кипит вода при нормальном атмосферном давлении?",
-      "text_en": "At what temperature does water boil at normal atmospheric pressure?",
-      "options_kk": ["50 °C", "80 °C", "90 °C", "100 °C"],
-      "options_ru": ["50 °C", "80 °C", "90 °C", "100 °C"],
-      "options_en": ["50 °C", "80 °C", "90 °C", "100 °C"]
+      "text_kk": "Екі әке мен екі ұл балық аулауға барды. Әрқайсысы бір-бірден балық ұстады, бірақ олар барлығы үш балық қана ұстады. Балық аулауға неше адам барды?",
+      "text_ru": "Два отца и два сына пошли на рыбалку. Каждый поймал по одной рыбе, но всего они поймали только три рыбы. Сколько человек было на рыбалке?",
+      "text_en": "Two fathers and two sons went fishing. Each caught one fish, but they caught only three fish in total. How many people went fishing?",
+      "options_kk": [
+        "2 адам",
+        "4 адам",
+        "5 адам",
+        "3 адам"
+      ],
+      "options_ru": [
+        "2 человека",
+        "4 человека",
+        "5 человек",
+        "3 человека"
+      ],
+      "options_en": [
+        "2 people",
+        "4 people",
+        "5 people",
+        "3 people"
+      ]
     },
     {
       "points": 2,
       "correct_index": 0,
-      "text_kk": "Ғылыми зерттеудің бірінші қадамы қандай?",
-      "text_ru": "Какой первый шаг научного исследования?",
-      "text_en": "What is the first step of scientific research?",
+      "text_kk": "Сыныпта 30 оқушы бар. Оның 18-і ағылшын тілін, 16-сы неміс тілін оқиды, ал 5-еуі бұл тілдердің ешқайсысын оқымайды. Қанша оқушы екі тілді де оқиды?",
+      "text_ru": "В классе 30 учеников. 18 изучают английский язык, 16 — немецкий, а 5 не изучают ни один из этих языков. Сколько учеников изучают оба языка?",
+      "text_en": "There are 30 students in a class. 18 study English, 16 study German, and 5 study neither of these languages. How many students study both languages?",
       "options_kk": [
-        "Мәселені қою және гипотеза ұсыну",
-        "Қорытынды жазу",
-        "Мақала жариялау",
-        "Марапат алу"
+        "9",
+        "4",
+        "11",
+        "7"
       ],
       "options_ru": [
-        "Постановка проблемы и выдвижение гипотезы",
-        "Написание вывода",
-        "Публикация статьи",
-        "Получение награды"
+        "9",
+        "4",
+        "11",
+        "7"
       ],
       "options_en": [
-        "Stating the problem and forming a hypothesis",
-        "Writing the conclusion",
-        "Publishing an article",
-        "Receiving an award"
+        "9",
+        "4",
+        "11",
+        "7"
+      ]
+    },
+    {
+      "points": 2,
+      "correct_index": 2,
+      "text_kk": "Қай математик жеткілікті күшті, қайшылықсыз және тиімді аксиомаланатын формальды арифметика жүйесінде осы жүйенің құралдарымен дәлелдеуге де, терістеуге де болмайтын тұжырымдар бар екенін дәлелдеді?",
+      "text_ru": "Какой математик доказал, что в достаточно сильной, непротиворечивой и эффективно аксиоматизируемой формальной системе арифметики существуют утверждения, которые невозможно ни доказать, ни опровергнуть средствами этой системы?",
+      "text_en": "Which mathematician proved that in a sufficiently strong, consistent, and effectively axiomatizable formal system of arithmetic there exist statements that can be neither proved nor disproved by means of that system?",
+      "options_kk": [
+        "Давид Гильберт",
+        "Алан Тьюринг",
+        "Курт Гедель",
+        "Алонзо Черч"
+      ],
+      "options_ru": [
+        "Давид Гильберт",
+        "Алан Тьюринг",
+        "Курт Гёдель",
+        "Алонзо Чёрч"
+      ],
+      "options_en": [
+        "David Hilbert",
+        "Alan Turing",
+        "Kurt Gödel",
+        "Alonzo Church"
+      ]
+    },
+    {
+      "points": 2,
+      "correct_index": 0,
+      "text_kk": "Айтуларынша, бір отбасы ұлына Аристократис деген грек тілінде жоқ есім қоймақшы болыпты. Діни қызметкер мен құжат рәсімдеген адам бұл есімді әртүрлі естіген. Көп жылдан кейін екі ағайынды екі әйгілі ежелгі грек ойшылының емес, атасының құрметіне есім алған. Осы ағайындыларды атаңыз.",
+      "text_ru": "Рассказывают, что однажды семейная пара решила назвать своего сына несуществующим греческим именем Аристократис. Священник и человек, оформлявший документы, расслышали имя по-разному. Спустя много лет два брата получили имена в честь деда, а не двух известных древнегреческих мыслителей. Назовите этих братьев.",
+      "text_en": "The story goes that a married couple once decided to name their son with the non-existent Greek name Aristokratis. The priest and the person who prepared the documents heard the name differently. Many years later, two brothers were named after their grandfather, not after two famous ancient Greek thinkers. Name these brothers.",
+      "options_kk": [
+        "Аристотелес пен Сократис",
+        "Аристидес пен Софоклес",
+        "Пифагор мен Евклид",
+        "Теодорос пен Николаос"
+      ],
+      "options_ru": [
+        "Аристотелес и Сократис",
+        "Аристидес и Софоклес",
+        "Пифагор и Евклид",
+        "Теодорос и Николаос"
+      ],
+      "options_en": [
+        "Aristoteles and Sokratis",
+        "Aristides and Sophocles",
+        "Pythagoras and Euclid",
+        "Theodoros and Nikolaos"
+      ]
+    },
+    {
+      "points": 2,
+      "correct_index": 1,
+      "text_kk": "«Пи» фильмінің басты кейіпкері — сандар теориясымен айналысатын математик. Википедияда фильмнің ұзақтығы 84 минут деп көрсетілген. Викторинаның бастапқы сұрағына сәйкес, фильм секундына дейінгі дәлдікпен қанша уақытқа созылады?",
+      "text_ru": "Главный герой фильма «Пи» — математик, занимающийся теорией чисел. В Википедии продолжительность фильма указана как 84 минуты. Согласно исходному вопросу викторины, сколько длится фильм с точностью до секунды?",
+      "text_en": "The main character of the film “Pi” is a mathematician working in number theory. Wikipedia gives the film’s running time as 84 minutes. According to the original quiz question, how long is the film to the nearest second?",
+      "options_kk": [
+        "1 сағат 24 минут 00 секунд",
+        "1 сағат 23 минут 45 секунд",
+        "1 сағат 24 минут 15 секунд",
+        "1 сағат 22 минут 45 секунд"
+      ],
+      "options_ru": [
+        "1 час 24 минуты 00 секунд",
+        "1 час 23 минуты 45 секунд",
+        "1 час 24 минуты 15 секунд",
+        "1 час 22 минуты 45 секунд"
+      ],
+      "options_en": [
+        "1 hour 24 minutes 00 seconds",
+        "1 hour 23 minutes 45 seconds",
+        "1 hour 24 minutes 15 seconds",
+        "1 hour 22 minutes 45 seconds"
+      ]
+    },
+    {
+      "points": 2,
+      "correct_index": 2,
+      "text_kk": "Әзілге қарағанда, математиктердің мысықтары «кис-кис-кис» дегенге жауап береді. Сұрақ мәтінінде біз қандай математикалық белгіні үш рет өзгерттік?",
+      "text_ru": "Согласно шутке, коты математиков откликаются на «кис-кис-кис». Какое математическое обозначение мы трижды изменили в тексте вопроса?",
+      "text_en": "According to the joke, mathematicians’ cats respond to “kis-kis-kis”. Which mathematical symbol did we change three times in the text of the question?",
+      "options_kk": [
+        "Плюс",
+        "Минус",
+        "Икс",
+        "Игрек"
+      ],
+      "options_ru": [
+        "Плюс",
+        "Минус",
+        "Икс",
+        "Игрек"
+      ],
+      "options_en": [
+        "Plus",
+        "Minus",
+        "X",
+        "Y"
+      ]
+    },
+    {
+      "points": 2,
+      "correct_index": 3,
+      "text_kk": "IX ғасырдағы ғалым әл-Кинди математикамен және астрономиямен айналысқан. Оның трактаттарының бір бөлігі геометриялық салуларға арналған, ал біреуінде ОЛАРДЫ қалай дұрыс салып, дәл бағдарлау керектігі айтылады. ОЛАРДЫ екі сөзбен атаңыз.",
+      "text_ru": "Учёный IX века Аль-Кинди занимался математикой и астрономией. Часть его трактатов посвящена геометрическим построениям, а ещё один сообщает, как правильно построить и точно ориентировать ИХ. Назовите ИХ двумя словами.",
+      "text_en": "The 9th-century scholar Al-Kindi worked in mathematics and astronomy. Some of his treatises are devoted to geometric constructions, and one explains how to correctly build and precisely orient THEM. Name THEM in two words.",
+      "options_kk": [
+        "Су сағаттары",
+        "Механикалық сағаттар",
+        "Магнитті компастар",
+        "Күн сағаттары"
+      ],
+      "options_ru": [
+        "Водяные часы",
+        "Механические часы",
+        "Магнитные компасы",
+        "Солнечные часы"
+      ],
+      "options_en": [
+        "Water clocks",
+        "Mechanical clocks",
+        "Magnetic compasses",
+        "Sundials"
+      ]
+    },
+    {
+      "points": 2,
+      "correct_index": 1,
+      "text_kk": "Қазақстанда кішкентай балаларға арналған «Хан талапай» («Ханды тонау») ойыны бар. Жүргізушінің белгісі бойынша балалар үйіндіден неғұрлым көп сүйек жинап алуға тырысады. Ойынның сипаттамасы бойынша, ол неге үйренуге көмектеседі?",
+      "text_ru": "Для маленьких детей в Казахстане существует игра «Ограбление хана» («Хан талапай»). По команде ведущего дети стремятся набрать из кучи наибольшее количество костей. Чему, согласно описанию игры, она помогает научиться?",
+      "text_en": "In Kazakhstan there is a game for young children called “Robbing the Khan” (“Khan Talapai”). On the leader’s command, the children try to grab as many bones as possible from a pile. According to the description of the game, what does it help them learn?",
+      "options_kk": [
+        "Географияға",
+        "Ауызша санауға",
+        "Жүзуге",
+        "Жылдам оқуға"
+      ],
+      "options_ru": [
+        "Географии",
+        "Устному счёту",
+        "Плаванию",
+        "Быстрому чтению"
+      ],
+      "options_en": [
+        "Geography",
+        "Mental arithmetic",
+        "Swimming",
+        "Speed reading"
       ]
     }
   ]

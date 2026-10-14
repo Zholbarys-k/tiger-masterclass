@@ -462,6 +462,10 @@ function task3ControlsHtml(item) {
           <span class="badge badge--info">${escapeHtml(t(T3_PHASE_LABELS[round.phase] || "admin.round.phase_idle"))}</span>
           ${round.is_paused ? `<span class="badge badge--accent">⏸ ${escapeHtml(t("admin.quiz.paused"))}</span>` : ""}
           <span class="badge badge--muted">${item.submissions_count || 0} 📨</span>
+          <button type="button" class="btn btn--icon btn--ghost qpult-close"
+            data-edit-task="${item.task_id}"
+            title="${escapeHtml(t("admin.tasks.edit"))}"
+            aria-label="${escapeHtml(t("admin.tasks.edit"))}">✏️</button>
           <button type="button" class="btn btn--icon btn--danger qpult-close"
             data-delete-task="${item.task_id}"
             title="${escapeHtml(t("admin.tasks.delete"))}"
@@ -647,6 +651,7 @@ function taskCardHtml(task) {
         </div>
       </div>
       <div class="card__body">
+        ${task.image_url ? `<img class="content-image content-image--sm" src="${fileUrl(task.image_url)}" alt="">` : ""}
         <div class="muted">${nl2br(task.body)}</div>
         <div class="row" style="margin-top:var(--space-3)">
           <button type="button" class="btn btn--sm btn--ghost" data-edit-task="${task.id}">✏️ ${escapeHtml(t("admin.tasks.edit"))}</button>
@@ -657,6 +662,70 @@ function taskCardHtml(task) {
         </div>
       </div>
     </article>`;
+}
+
+const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
+
+function imagePickerHtml(currentUrl) {
+  return `
+    <div class="field">
+      <label class="field__label">${escapeHtml(t("admin.media.photo"))}</label>
+      <div class="image-picker">
+        <img class="image-picker__preview ${currentUrl ? "" : "hidden"}" data-image-preview
+             src="${currentUrl ? fileUrl(currentUrl) : ""}" alt="">
+        <div class="row">
+          <label class="btn btn--sm btn--ghost">
+            🖼️ ${escapeHtml(t(currentUrl ? "admin.media.replace" : "admin.media.choose"))}
+            <input type="file" accept="image/*" data-image-input hidden>
+          </label>
+          <button type="button" class="btn btn--sm btn--danger ${currentUrl ? "" : "hidden"}" data-image-remove>
+            ✕ ${escapeHtml(t("admin.media.remove"))}</button>
+        </div>
+        <div class="muted" style="font-size:.78rem">${escapeHtml(t("admin.media.hint"))}</div>
+      </div>
+    </div>`;
+}
+
+/** Выбор фото в модальном окне: файл загружается после сохранения формы. */
+function wireImagePicker(box) {
+  const state = { file: null, remove: false };
+  const input = box.querySelector("[data-image-input]");
+  const preview = box.querySelector("[data-image-preview]");
+  const removeButton = box.querySelector("[data-image-remove]");
+
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    input.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      notify.err(t("admin.media.bad_type"));
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      notify.err(t("tasks.file_too_big"));
+      return;
+    }
+    state.file = file;
+    state.remove = false;
+    if (preview.src.startsWith("blob:")) URL.revokeObjectURL(preview.src);
+    preview.src = URL.createObjectURL(file);
+    preview.classList.remove("hidden");
+    removeButton.classList.remove("hidden");
+  });
+
+  removeButton.addEventListener("click", () => {
+    state.file = null;
+    state.remove = true;
+    preview.removeAttribute("src");
+    preview.classList.add("hidden");
+    removeButton.classList.add("hidden");
+  });
+  return state;
+}
+
+async function applyImage(state, hadImage, uploadImage, deleteImage) {
+  if (state.file) await uploadImage(state.file);
+  else if (state.remove && hadImage) await deleteImage();
 }
 
 function openTaskModal(task) {
@@ -679,6 +748,7 @@ function openTaskModal(task) {
         <label class="field__label">${escapeHtml(t("admin.tasks.max_points"))}</label>
         <input class="input input--score" type="number" data-field="max_points" value="${task?.max_points ?? 10}">
       </div>
+      ${imagePickerHtml(task?.image_url)}
       <label class="row" style="margin-bottom:var(--space-4)">
         <input type="checkbox" data-field="is_published" ${task?.is_published !== false ? "checked" : ""}
                style="width:22px;height:22px">
@@ -688,7 +758,9 @@ function openTaskModal(task) {
         <button type="button" class="btn btn--primary" data-save>${escapeHtml(task ? t("common.save") : t("admin.tasks.create"))}</button>
       </div>`,
     onMount(box, close) {
-      box.querySelector("[data-save]").addEventListener("click", async () => {
+      const image = wireImagePicker(box);
+      const saveButton = box.querySelector("[data-save]");
+      saveButton.addEventListener("click", async () => {
         const payload = {};
         box.querySelectorAll("[data-field]").forEach((element) => {
           const key = element.dataset.field;
@@ -697,14 +769,24 @@ function openTaskModal(task) {
           else payload[key] = element.value;
         });
 
+        saveButton.disabled = true;
         try {
-          if (task) await api.admin.updateTask(task.id, payload);
-          else await api.admin.createTask(payload);
+          const result = task
+            ? await api.admin.updateTask(task.id, payload)
+            : await api.admin.createTask(payload);
+          const taskId = result.task.id;
+          await applyImage(
+            image,
+            Boolean(task?.image_url),
+            (file) => api.admin.uploadTaskImage(taskId, file),
+            () => api.admin.deleteTaskImage(taskId),
+          );
           notify.ok(t(task ? "admin.tasks.updated" : "admin.tasks.created"));
           close();
           render();
         } catch (error) {
           notify.err(apiErrorMessage(error));
+          saveButton.disabled = false;
         }
       });
     },
@@ -856,7 +938,7 @@ function quizControlsHtml(quiz) {
     </div>`;
 }
 
-function quizQuestionCardHtml(row, quiz) {
+function quizQuestionCardHtml(row, quiz, question) {
   const bars = row.options.map((option, index) => {
     const count = row.distribution[String(index)] || 0;
     const percent = row.answers_count ? Math.round((count * 100) / row.answers_count) : 0;
@@ -884,10 +966,162 @@ function quizQuestionCardHtml(row, quiz) {
           <span class="badge badge--success">${escapeHtml(t("admin.quiz.correct_count"))}: ${row.correct_count}</span>
           <button type="button" class="btn btn--sm btn--ghost" data-goto="${row.index}"
             ${quiz?.questions_count ? "" : "disabled"}>▶️ ${escapeHtml(t("admin.quiz.goto"))}</button>
+          <button type="button" class="btn btn--icon btn--ghost qpult-close" data-edit-question="${row.question_id}"
+            title="${escapeHtml(t("admin.quiz.edit_question"))}"
+            aria-label="${escapeHtml(t("admin.quiz.edit_question"))}">✏️</button>
+          <button type="button" class="btn btn--icon btn--danger qpult-close" data-delete-question="${row.question_id}"
+            title="${escapeHtml(t("admin.quiz.delete_question"))}"
+            aria-label="${escapeHtml(t("admin.quiz.delete_question"))}">✕</button>
         </div>
       </div>
-      <div class="card__body">${bars}</div>
+      <div class="card__body">
+        ${question?.image_url ? `<img class="content-image content-image--sm" src="${fileUrl(question.image_url)}" alt="">` : ""}
+        ${bars}
+        <div class="muted" style="font-size:.78rem; margin-top:var(--space-2)">
+          ${escapeHtml(t("admin.quiz.points"))}: ${row.points ?? question?.points ?? ""}</div>
+      </div>
     </article>`;
+}
+
+const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"];
+const QUIZ_LANGS = [["kk", "ҚАЗ"], ["ru", "РУС"], ["en", "ENG"]];
+const MIN_OPTIONS = 2;
+const MAX_OPTIONS = 6;
+
+function openQuestionModal(question, onDone) {
+  const count = Math.max(
+    MIN_OPTIONS,
+    question?.options_ru?.length || question?.options_en?.length || question?.options_kk?.length || 4,
+  );
+  const options = Array.from({ length: count }, (_, index) => ({
+    kk: question?.options_kk?.[index] || "",
+    ru: question?.options_ru?.[index] || "",
+    en: question?.options_en?.[index] || "",
+  }));
+  let correct = question?.correct_index ?? 0;
+
+  const textFields = QUIZ_LANGS.map(([code, label]) => `
+    <div class="field">
+      <label class="field__label">${escapeHtml(t("admin.quiz.question_text"))} · ${label}</label>
+      <textarea class="textarea" rows="2" data-qtext="${code}">${escapeHtml(question?.[`text_${code}`] || "")}</textarea>
+    </div>`).join("");
+
+  openModal({
+    title: question ? t("admin.quiz.edit_question") : t("admin.quiz.new_question"),
+    bodyHtml: `
+      <p class="muted" style="margin-top:0; font-size:.85rem">${escapeHtml(t("admin.quiz.edit_hint"))}</p>
+      ${textFields}
+      <div class="field__label" style="margin-bottom:var(--space-2)">${escapeHtml(t("admin.quiz.options"))}</div>
+      <div class="stack" data-options></div>
+      <button type="button" class="btn btn--sm btn--ghost" data-add-option
+        style="margin:var(--space-3) 0 var(--space-4)">➕ ${escapeHtml(t("admin.quiz.add_option"))}</button>
+      <div class="field">
+        <label class="field__label">${escapeHtml(t("admin.quiz.points"))}</label>
+        <input class="input input--score" type="number" min="0" max="100" data-qpoints value="${question?.points ?? 2}">
+      </div>
+      ${imagePickerHtml(question?.image_url)}
+      <div class="row row-end">
+        <button type="button" class="btn btn--primary" data-save>
+          ${escapeHtml(question ? t("common.save") : t("admin.quiz.add_question"))}</button>
+      </div>`,
+    onMount(box, close) {
+      const list = box.querySelector("[data-options]");
+      const addButton = box.querySelector("[data-add-option]");
+      const saveButton = box.querySelector("[data-save]");
+      const image = wireImagePicker(box);
+
+      const collect = () => {
+        list.querySelectorAll("[data-option]").forEach((row) => {
+          const index = Number(row.dataset.option);
+          QUIZ_LANGS.forEach(([code]) => {
+            options[index][code] = row.querySelector(`[data-opt-lang="${code}"]`).value;
+          });
+        });
+        const checked = list.querySelector('input[name="q-correct"]:checked');
+        if (checked) correct = Number(checked.value);
+      };
+
+      const draw = () => {
+        list.innerHTML = options.map((option, index) => `
+          <div class="qedit-option ${index === correct ? "is-correct" : ""}" data-option="${index}">
+            <div class="spread">
+              <label class="row qedit-option__correct">
+                <input type="radio" name="q-correct" value="${index}" ${index === correct ? "checked" : ""}>
+                <strong>${OPTION_LETTERS[index]}</strong>
+                <span class="muted">${escapeHtml(t(index === correct ? "admin.quiz.is_correct" : "admin.quiz.mark_correct"))}</span>
+              </label>
+              <button type="button" class="btn btn--icon btn--ghost qpult-close" data-remove-option="${index}"
+                ${options.length <= MIN_OPTIONS ? "disabled" : ""}
+                title="${escapeHtml(t("admin.quiz.remove_option"))}"
+                aria-label="${escapeHtml(t("admin.quiz.remove_option"))}">✕</button>
+            </div>
+            ${QUIZ_LANGS.map(([code, label]) => `
+              <label class="qedit-lang">
+                <span class="qedit-lang__tag">${label}</span>
+                <input class="input" data-opt-lang="${code}" value="${escapeHtml(option[code])}">
+              </label>`).join("")}
+          </div>`).join("");
+        addButton.disabled = options.length >= MAX_OPTIONS;
+      };
+
+      list.addEventListener("change", (event) => {
+        if (event.target.name !== "q-correct") return;
+        collect();
+        draw();
+      });
+
+      list.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-remove-option]");
+        if (!button || options.length <= MIN_OPTIONS) return;
+        collect();
+        const index = Number(button.dataset.removeOption);
+        options.splice(index, 1);
+        if (correct === index) correct = 0;
+        else if (correct > index) correct -= 1;
+        draw();
+      });
+
+      addButton.addEventListener("click", () => {
+        collect();
+        if (options.length < MAX_OPTIONS) options.push({ kk: "", ru: "", en: "" });
+        draw();
+      });
+
+      saveButton.addEventListener("click", async () => {
+        collect();
+        const payload = {
+          correct_index: correct,
+          points: Number(box.querySelector("[data-qpoints]").value || 0),
+        };
+        QUIZ_LANGS.forEach(([code]) => {
+          payload[`text_${code}`] = box.querySelector(`[data-qtext="${code}"]`).value.trim();
+          payload[`options_${code}`] = options.map((option) => option[code].trim());
+        });
+
+        saveButton.disabled = true;
+        try {
+          const result = question
+            ? await api.admin.updateQuestion(question.id, payload)
+            : await api.admin.createQuestion(payload);
+          const questionId = result.question.id;
+          await applyImage(
+            image,
+            Boolean(question?.image_url),
+            (file) => api.admin.uploadQuestionImage(questionId, file),
+            () => api.admin.deleteQuestionImage(questionId),
+          );
+          notify.ok(t(question ? "admin.quiz.question_saved" : "admin.quiz.question_created"));
+          close();
+          onDone();
+        } catch (error) {
+          notify.err(apiErrorMessage(error));
+          saveButton.disabled = false;
+        }
+      });
+
+      draw();
+    },
+  });
 }
 
 const quizTab = {
@@ -895,7 +1129,10 @@ const quizTab = {
 
   async render() {
     stopQuizTick();
-    const results = await api.admin.quizResults();
+    const [results, editable] = await Promise.all([
+      api.admin.quizResults(),
+      api.admin.quizQuestions(),
+    ]);
     const quiz = results.quiz;
 
     if (!quiz) {
@@ -903,15 +1140,46 @@ const quizTab = {
       return;
     }
 
-    const rows = (results.rows || []).map((row) => quizQuestionCardHtml(row, quiz)).join("");
+    const questionsById = new Map((editable.questions || []).map((question) => [question.id, question]));
+    const rows = (results.rows || [])
+      .map((row) => quizQuestionCardHtml(row, quiz, questionsById.get(row.question_id)))
+      .join("");
 
     content.innerHTML = `
       ${quizControlsHtml(quiz)}
-      <h3 style="margin-top:var(--space-5)">${escapeHtml(t("admin.quiz.questions"))}</h3>
-      <div class="muted" style="font-size:.82rem; margin-bottom:var(--space-3)">
+      <div class="spread" style="margin-top:var(--space-5)">
+        <h3 style="margin:0">${escapeHtml(t("admin.quiz.questions"))}</h3>
+        <button type="button" class="btn btn--sm btn--primary" data-add-question>
+          ➕ ${escapeHtml(t("admin.quiz.add_question"))}</button>
+      </div>
+      <div class="muted" style="font-size:.82rem; margin:var(--space-2) 0 var(--space-3)">
         ${escapeHtml(t("admin.quiz.goto_hint"))}
       </div>
       <div class="stack">${rows || emptyState("admin.subs.empty", "🧠")}</div>`;
+
+    content.querySelector("[data-add-question]").addEventListener("click", () => {
+      openQuestionModal(null, render);
+    });
+
+    content.querySelectorAll("[data-edit-question]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const question = questionsById.get(Number(button.dataset.editQuestion));
+        if (question) openQuestionModal(question, render);
+      });
+    });
+
+    content.querySelectorAll("[data-delete-question]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        if (!await confirmDialog(t("admin.quiz.confirm_delete_question"))) return;
+        try {
+          await api.admin.deleteQuestion(Number(button.dataset.deleteQuestion));
+          notify.ok(t("admin.quiz.question_deleted"));
+        } catch (error) {
+          notify.err(apiErrorMessage(error));
+        }
+        render();
+      });
+    });
 
     const control = async (action, payload = {}) => {
       try {

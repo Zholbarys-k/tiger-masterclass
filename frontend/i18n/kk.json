@@ -1,12 +1,10 @@
 {
-  "app.name": "TIGER MasterClass",
+  "app.name": "Жас Ұстаз",
   "app.subtitle": "Мектеп шеберлік сыныбы",
   "lang.name": "ҚАЗАҚША",
-
   "role.admin": "Әкімші",
   "role.leader": "Команда басшысы",
   "role.member": "Қатысушы",
-
   "login.title": "Жүйеге кіру",
   "login.subtitle": "Ұйымдастырушылар берген логин мен парольді енгізіңіз",
   "login.login": "Логин",
@@ -19,7 +17,6 @@
   "login.error_bad": "Логин немесе пароль қате",
   "login.hint": "Рөл логин бойынша автоматты анықталады",
   "login.show_password": "Парольді көрсету",
-
   "nav.tasks": "Тапсырмалар",
   "nav.quiz": "Тест",
   "nav.voting": "Дауыс беру",
@@ -27,26 +24,23 @@
   "nav.team": "Команда",
   "nav.logout": "Шығу",
   "nav.messages": "Әкімшіге",
-
   "profile.title": "Менің профилім",
   "profile.hint": "Өзіңіз туралы жазыңыз — ұйымдастырушылар мен команда сізді таниды",
   "profile.name": "Аты-жөніңіз",
   "profile.name_ph": "Аты және тегі",
   "profile.school": "Мектеп",
   "profile.school_ph": "Мектеп атауы",
-  "profile.grade": "Сынып",
-  "profile.grade_ph": "мысалы, 9А",
+  "profile.grade": "Мамандық",
+  "profile.grade_ph": "мысалы, мұғалім",
   "profile.about": "Өзім туралы",
   "profile.about_ph": "Қысқаша: қызығушылық, немен айналысасыз",
   "profile.saved": "Профиль сақталды",
-
   "messages.title": "Әкімшіге жазу",
   "messages.hint": "Ұйымдастырушыларға сұрақ қойыңыз. Жауап осында шығады.",
   "messages.ph": "Сұрағыңыз…",
   "messages.empty": "Хабарлама жазыңыз",
   "messages.empty_thread": "Әзірге хабар жоқ. Сұрақ жазыңыз — әкімші осында жауап береді.",
   "messages.admin": "Әкімші",
-
   "common.loading": "Жүктелуде...",
   "common.save": "Сақтау",
   "common.cancel": "Болдырмау",
@@ -67,7 +61,6 @@
   "common.open": "Ашу",
   "common.copy": "Көшіру",
   "common.copied": "Көшірілді",
-
   "tasks.title": "Тапсырмалар лентасы",
   "tasks.hint": "Барлық командаларға әкімшіден келген тапсырмалар",
   "tasks.empty": "Әзірге тапсырма жоқ. Әкімшінің жариялауын күтіңіз.",
@@ -92,7 +85,6 @@
   "tasks.no_answer_yet": "Команда әзірге жауап жіберген жоқ",
   "tasks.files": "Файлдар",
   "tasks.remove_file": "Файлды жою",
-
   "quiz.title": "Тест",
   "quiz.hint": "Сұрақтар бір-бірден, барлық командаға бір уақытта шығады",
   "quiz.closed": "Тест жабық",
@@ -116,7 +108,6 @@
   "quiz.waiting": "Басшының жауабын күтуде",
   "quiz.progress": "Барыс",
   "quiz.finished": "Барлық сұрақ жауапталды! Тамаша жұмыс!",
-
   "quiz.time_left": "Қалған секунд",
   "quiz.next_question_in": "Келесі сұраққа дейін",
   "quiz.waiting_start": "Тест жақында басталады",
@@ -132,7 +123,6 @@
   "quiz.paused": "Тестті әкімші уақытша тоқтатты",
   "quiz.final_title": "Тест аяқталды",
   "quiz.final_hint": "Дұрыс жауап: {total} сұрақтан {correct} · {points} ұпай",
-
   "vote.title": "Секцияларға дауыс беру",
   "vote.hint": "Бір секцияны таңдаңыз. Дауысты өзгертуге болады.",
   "vote.your_choice": "Сіздің таңдауыңыз",
@@ -154,13 +144,11 @@
   "vote.task3.empty": "Командалар әлі жоба жіберген жоқ",
   "vote.task3.no_desc": "Сипаттама жоқ",
   "vote.task3.own": "Бұл сіздің командаңыздың жобасы",
-
   "tasks.task3.live": "№3 тапсырмаға сағат жүріп жатыр",
   "tasks.task3.live_hint": "Таймер біткенше жобаның фотосы мен қысқа сипаттамасын жіберіңіз.",
   "tasks.task3.wait_start": "Әкімші №3 тапсырманы әлі бастаған жоқ.",
   "tasks.task3.ended": "№3 тапсырма уақыты бітті. Жобалар мен дауыс беру — «Дауыс беру» бөлімінде.",
   "tasks.task3.locked": "№3 тапсырмаға жауап қабылдау жабық",
-
   "rating.title": "Командалар рейтингі",
   "rating.hint": "Автоматты жаңарады. Жауап жібермеген командалар көрінбейді.",
   "rating.top": "ТОП-10",
@@ -176,7 +164,6 @@
   "rating.your_team": "Сіздің командаңыз",
   "rating.teams_ranked": "команда рейтингте",
   "rating.not_ranked": "Командаңыз бірінші жауаптан кейін рейтингте пайда болады",
-
   "team.title": "Менің командам",
   "team.hint": "Команда құрамы және нәтижелері",
   "team.name": "Команда атауы",
@@ -198,7 +185,6 @@
   "team.chat_clear": "Чатты тазалау",
   "team.chat_confirm_clear": "Команда чатындағы барлық хабарларды өшіру керек пе?",
   "team.chat_cleared": "Команда чаты тазаланды",
-
   "admin.title": "Әкімші панелі",
   "admin.tab.overview": "Шолу",
   "admin.tab.teams": "Командалар",
@@ -208,7 +194,6 @@
   "admin.tab.votes": "Дауыстар",
   "admin.tab.messages": "Хабарлар",
   "admin.tab.rating": "Рейтинг",
-
   "admin.stats.teams": "Командалар",
   "admin.stats.active_teams": "Белсенді командалар",
   "admin.stats.users": "Аккаунттар",
@@ -223,7 +208,6 @@
   "admin.passwords": "Шара парольдері",
   "admin.password_participants": "Қатысушылар мен басшылар",
   "admin.password_admins": "Әкімшілер",
-
   "admin.teams.search_ph": "Команда немесе логин бойынша іздеу",
   "admin.teams.rename": "Атауын өзгерту",
   "admin.teams.edit_login": "Логинді өзгерту",
@@ -244,7 +228,6 @@
   "admin.teams.login_changed": "Логин өзгертілді",
   "admin.teams.moved": "Қатысушы көшірілді",
   "admin.teams.score_changed": "Ұпайлар жаңартылды",
-
   "admin.tasks.new": "Жаңа тапсырма",
   "admin.tasks.create": "Тапсырма жасау",
   "admin.tasks.edit": "Өңдеу",
@@ -261,7 +244,6 @@
   "admin.tasks.updated": "Тапсырма жаңартылды",
   "admin.tasks.deleted": "Тапсырма жойылды",
   "admin.tasks.empty": "Тапсырмалар жоқ",
-
   "admin.quiz.status": "Тест күйі",
   "admin.quiz.open": "Тестті барлығына ашу",
   "admin.quiz.close": "Тестті жабу",
@@ -276,7 +258,6 @@
   "admin.quiz.show_results": "Дұрыс жауапты көрсету",
   "admin.quiz.opened": "Тест барлық командаға ашылды",
   "admin.quiz.closed": "Тест жабылды",
-
   "admin.quiz.control": "Тест пульті",
   "admin.quiz.start": "▶️ Тестті бастау",
   "admin.quiz.restart": "🔁 Қайта бастау",
@@ -304,7 +285,6 @@
   "admin.quiz.phase_finished": "Тест аяқталды",
   "admin.quiz.phase_question_hint": "Командалар жауап беруде. Уақыт қосуға немесе рейтингті ертерек көрсетуге болады.",
   "admin.quiz.phase_standings_hint": "Қатысушылар дұрыс жауап пен командалар орнын көреді.",
-
   "admin.subs.title": "Командалардың барлық жауабы",
   "admin.subs.filter_task": "Барлық тапсырмалар",
   "admin.subs.filter_team": "Барлық командалар",
@@ -321,7 +301,6 @@
   "admin.subs.reset_all": "Барлық жауапты тазалау",
   "admin.subs.confirm_reset_all": "Барлық тапсырмалардың (жаңаларын қоса) жауаптарын файлдармен және лайктармен жою керек пе? Тапсырма ұпайлары нөлденеді.",
   "admin.subs.reset_done": "Барлық жауап жойылды",
-
   "admin.votes.title": "Дауыс беру нәтижесі",
   "admin.votes.reset": "Барлық дауысты өшіру",
   "admin.votes.confirm_reset": "Барлық дауысты өшіру керек пе?",
@@ -338,7 +317,6 @@
   "admin.votes.reset_likes": "Жоба лайктарын нөлдеу",
   "admin.votes.confirm_reset_likes": "№3 тапсырма жобаларының барлық лайктарын өшіру керек пе?",
   "admin.votes.likes_reset": "Жоба лайктары өшірілді",
-
   "admin.round.title": "№{n} тапсырма пульті",
   "admin.round.hint": "Командаларға жобаға бір сағат беріледі. Уақыт біткен соң жобалар лайкпен дауыс беруге ашылады.",
   "admin.round.start": "▶️ Сағатты бастау",
@@ -360,7 +338,6 @@
   "admin.round.confirm_reset": "Осы тапсырманы бастапқы күйге қайтарып, лайктарын өшіру керек пе?",
   "admin.round.applied": "Команда орындалды",
   "admin.round.settings_saved": "Уақыт сақталды",
-
   "vote.round.title": "№{n} тапсырмаға дауыс беру",
   "vote.round.hint": "Ұнаған жобаға лайк қойыңыз. Дауысты өзгертуге болады. Өз жобаңызға дауыс беруге болмайды.",
   "vote.round.closed_hint": "Дауыс беру жабық. Жеңімпазды лайк саны анықтайды.",
@@ -371,7 +348,6 @@
   "vote.round.empty": "Командалар әлі жоба жіберген жоқ",
   "vote.round.no_desc": "Сипаттама жоқ",
   "vote.round.own": "Бұл сіздің командаңыздың жобасы",
-
   "tasks.round.live": "№{n} тапсырмаға сағат жүріп жатыр",
   "tasks.round.live_hint": "Таймер біткенше жобаның фотосы мен қысқа сипаттамасын жіберіңіз.",
   "tasks.round.wait_start": "Әкімші №{n} тапсырманы әлі бастаған жоқ.",
@@ -379,7 +355,6 @@
   "tasks.round.locked": "№{n} тапсырмаға жауап қабылдау жабық",
   "tasks.round.sealed_title": "№{n} тапсырма",
   "tasks.round.sealed_hint": "Мәтін жасырын. Әкімші рұқсат ашқанда көрінеді.",
-
   "admin.task3.title": "№3 тапсырма пульті",
   "admin.task3.hint": "Командаларға жобаға бір сағат беріледі. Уақыт біткен соң жобалар лайкпен дауыс беруге ашылады.",
   "admin.task3.start": "▶️ Сағатты бастау",
@@ -401,13 +376,11 @@
   "admin.task3.confirm_reset": "№3 тапсырманы бастапқы күйге қайтарып, барлық лайкты өшіру керек пе?",
   "admin.task3.applied": "Команда орындалды",
   "admin.task3.settings_saved": "Уақыт сақталды",
-
   "admin.rating.title": "Жалпы рейтинг",
   "admin.rating.hint": "Әкімші барлық командаларды, оның ішінде жауап жібермегендерді де көреді",
   "admin.rating.reset_scores": "Барлық ұпайды нөлдеу",
   "admin.rating.confirm_reset_scores": "Барлық команда рейтингін нөлдеу керек пе? Тапсырма, тест және бонус ұпайлары нөл болады. Тапсырма жауаптары қалады.",
   "admin.rating.scores_reset": "Барлық ұпай нөлденді",
-
   "admin.messages.title": "Қатысушы сұрақтары",
   "admin.messages.hint": "Басшылар мен қатысушылардың хабарлары. Жауапты сұрақтың авторы көреді.",
   "admin.messages.empty": "Әзірге ешкім жазған жоқ",
@@ -416,5 +389,27 @@
   "admin.messages.reply_ph": "Қатысушыға жауап…",
   "admin.messages.reset_all": "Барлық чатты өшіру",
   "admin.messages.confirm_reset_all": "Барлық әкімшілік және командалық чаттарды өшіру керек пе? Бұл әрекетті қайтаруға болмайды.",
-  "admin.messages.reset_done": "Барлық чат өшірілді"
+  "admin.messages.reset_done": "Барлық чат өшірілді",
+  "admin.media.photo": "Сурет",
+  "admin.media.choose": "Сурет қосу",
+  "admin.media.replace": "Суретті ауыстыру",
+  "admin.media.remove": "Суретті алып тастау",
+  "admin.media.hint": "JPG, PNG, WEBP немесе GIF, 15 МБ-қа дейін. Сурет «Сақтау» басылғаннан кейін сақталады.",
+  "admin.media.bad_type": "Тек сурет жүктеуге болады",
+  "admin.quiz.add_question": "Сұрақ қосу",
+  "admin.quiz.new_question": "Жаңа сұрақ",
+  "admin.quiz.edit_question": "Сұрақты өңдеу",
+  "admin.quiz.delete_question": "Сұрақты жою",
+  "admin.quiz.confirm_delete_question": "Бұл сұрақты командалардың жауаптарымен бірге жою керек пе?",
+  "admin.quiz.question_text": "Сұрақ мәтіні",
+  "admin.quiz.options": "Жауап нұсқалары",
+  "admin.quiz.is_correct": "дұрыс жауап",
+  "admin.quiz.mark_correct": "дұрыс деп белгілеу",
+  "admin.quiz.add_option": "Нұсқа қосу",
+  "admin.quiz.remove_option": "Нұсқаны жою",
+  "admin.quiz.points": "Дұрыс жауап үшін ұпай",
+  "admin.quiz.edit_hint": "Бір тілді толтыру жеткілікті — бос тілдер автоматты түрде толтырылады. Дұрыс нұсқаны дөңгелекпен белгілеңіз.",
+  "admin.quiz.question_saved": "Сұрақ сақталды",
+  "admin.quiz.question_created": "Сұрақ қосылды",
+  "admin.quiz.question_deleted": "Сұрақ жойылды"
 }

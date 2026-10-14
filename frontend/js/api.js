@@ -136,6 +136,12 @@ function upload(path, formData, onProgress) {
   });
 }
 
+function imageForm(file) {
+  const form = new FormData();
+  form.append("file", file);
+  return form;
+}
+
 export const api = {
   // --- авторизация ---
   login: (login, password) => request("/api/auth/login", { method: "POST", json: { login, password } }),
@@ -204,6 +210,18 @@ export const api = {
     updateTask: (taskId, payload) =>
       request(`/api/admin/tasks/${taskId}`, { method: "PATCH", json: payload }),
     deleteTask: (taskId) => request(`/api/admin/tasks/${taskId}`, { method: "DELETE" }),
+    uploadTaskImage: (taskId, file) => upload(`/api/admin/tasks/${taskId}/image`, imageForm(file)),
+    deleteTaskImage: (taskId) => request(`/api/admin/tasks/${taskId}/image`, { method: "DELETE" }),
+    createQuestion: (payload) =>
+      request("/api/admin/quiz/questions", { method: "POST", json: payload }),
+    updateQuestion: (questionId, payload) =>
+      request(`/api/admin/quiz/questions/${questionId}`, { method: "PATCH", json: payload }),
+    deleteQuestion: (questionId) =>
+      request(`/api/admin/quiz/questions/${questionId}`, { method: "DELETE" }),
+    uploadQuestionImage: (questionId, file) =>
+      upload(`/api/admin/quiz/questions/${questionId}/image`, imageForm(file)),
+    deleteQuestionImage: (questionId) =>
+      request(`/api/admin/quiz/questions/${questionId}/image`, { method: "DELETE" }),
     toggleQuiz: (payload) => request("/api/admin/quiz/toggle", { method: "POST", json: payload }),
     quizControl: (action, payload = {}) =>
       request("/api/admin/quiz/control", { method: "POST", json: { action, ...payload } }),

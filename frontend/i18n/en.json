@@ -1,12 +1,10 @@
 {
-  "app.name": "TIGER MasterClass",
+  "app.name": "Жас Ұстаз",
   "app.subtitle": "School master class",
   "lang.name": "ENGLISH",
-
   "role.admin": "Administrator",
   "role.leader": "Team leader",
   "role.member": "Team member",
-
   "login.title": "Sign in",
   "login.subtitle": "Enter the login and password given by the organisers",
   "login.login": "Login",
@@ -19,7 +17,6 @@
   "login.error_bad": "Wrong login or password",
   "login.hint": "Your role is detected automatically from your login",
   "login.show_password": "Show password",
-
   "nav.tasks": "Tasks",
   "nav.quiz": "Quiz",
   "nav.voting": "Voting",
@@ -27,26 +24,23 @@
   "nav.team": "Team",
   "nav.logout": "Log out",
   "nav.messages": "Ask admin",
-
   "profile.title": "My profile",
   "profile.hint": "Tell us about yourself so organizers and your team can recognize you",
   "profile.name": "Your name",
   "profile.name_ph": "First and last name",
   "profile.school": "School",
   "profile.school_ph": "School name",
-  "profile.grade": "Grade",
-  "profile.grade_ph": "e.g. 9A",
+  "profile.grade": "Profession",
+  "profile.grade_ph": "e.g. teacher",
   "profile.about": "About you",
   "profile.about_ph": "A short note: interests, what you do",
   "profile.saved": "Profile saved",
-
   "messages.title": "Message the administrator",
   "messages.hint": "Ask the organizers a question. Their reply will appear here.",
   "messages.ph": "Your question…",
   "messages.empty": "Please type a message",
   "messages.empty_thread": "No messages yet. Write a question — an administrator will reply here.",
   "messages.admin": "Administrator",
-
   "common.loading": "Loading...",
   "common.save": "Save",
   "common.cancel": "Cancel",
@@ -67,7 +61,6 @@
   "common.open": "Open",
   "common.copy": "Copy",
   "common.copied": "Copied",
-
   "tasks.title": "Task feed",
   "tasks.hint": "Tasks published by the administrator for all teams",
   "tasks.empty": "No tasks yet. Wait for the administrator.",
@@ -92,7 +85,6 @@
   "tasks.no_answer_yet": "Your team has not sent an answer yet",
   "tasks.files": "Files",
   "tasks.remove_file": "Remove file",
-
   "quiz.title": "Quiz",
   "quiz.hint": "Questions come one by one and appear for every team at the same time",
   "quiz.closed": "The quiz is closed",
@@ -116,7 +108,6 @@
   "quiz.waiting": "Waiting for the leader's answer",
   "quiz.progress": "Progress",
   "quiz.finished": "All questions answered! Great job!",
-
   "quiz.time_left": "Seconds left",
   "quiz.next_question_in": "Next question in",
   "quiz.waiting_start": "The quiz starts soon",
@@ -132,7 +123,6 @@
   "quiz.paused": "The quiz is paused by the administrator",
   "quiz.final_title": "Quiz finished",
   "quiz.final_hint": "Correct answers: {correct} of {total} · {points} point(s)",
-
   "vote.title": "Vote for sections",
   "vote.hint": "Choose one master class section. You can change your vote.",
   "vote.your_choice": "Your choice",
@@ -154,13 +144,11 @@
   "vote.task3.empty": "Teams have not submitted projects yet",
   "vote.task3.no_desc": "No description",
   "vote.task3.own": "This is your team's project",
-
   "tasks.task3.live": "Task 3 hour is running",
   "tasks.task3.live_hint": "Send a photo and a short project description before the timer ends.",
   "tasks.task3.wait_start": "The administrator has not started Task 3 yet.",
   "tasks.task3.ended": "Task 3 time is up. Projects and voting are in the Voting section.",
   "tasks.task3.locked": "Task 3 submissions are closed",
-
   "rating.title": "Team leaderboard",
   "rating.hint": "Updates automatically. Teams without submissions are hidden.",
   "rating.top": "TOP 10",
@@ -176,7 +164,6 @@
   "rating.your_team": "Your team",
   "rating.teams_ranked": "teams ranked",
   "rating.not_ranked": "Your team will appear after your first submission",
-
   "team.title": "My team",
   "team.hint": "Team roster and results",
   "team.name": "Team name",
@@ -198,7 +185,6 @@
   "team.chat_clear": "Clear chat",
   "team.chat_confirm_clear": "Delete all messages in the team chat?",
   "team.chat_cleared": "Team chat cleared",
-
   "admin.title": "Admin panel",
   "admin.tab.overview": "Overview",
   "admin.tab.teams": "Teams",
@@ -208,7 +194,6 @@
   "admin.tab.votes": "Votes",
   "admin.tab.messages": "Messages",
   "admin.tab.rating": "Rating",
-
   "admin.stats.teams": "Teams",
   "admin.stats.active_teams": "Active teams",
   "admin.stats.users": "Accounts",
@@ -223,7 +208,6 @@
   "admin.passwords": "Event passwords",
   "admin.password_participants": "Members and leaders",
   "admin.password_admins": "Administrators",
-
   "admin.teams.search_ph": "Search by team or login",
   "admin.teams.rename": "Rename",
   "admin.teams.edit_login": "Change login",
@@ -244,7 +228,6 @@
   "admin.teams.login_changed": "Login changed",
   "admin.teams.moved": "Member moved",
   "admin.teams.score_changed": "Points updated",
-
   "admin.tasks.new": "New task",
   "admin.tasks.create": "Create task",
   "admin.tasks.edit": "Edit",
@@ -261,7 +244,6 @@
   "admin.tasks.updated": "Task updated",
   "admin.tasks.deleted": "Task deleted",
   "admin.tasks.empty": "No tasks",
-
   "admin.quiz.status": "Quiz status",
   "admin.quiz.open": "Open quiz for everyone",
   "admin.quiz.close": "Close quiz",
@@ -276,7 +258,6 @@
   "admin.quiz.show_results": "Show the correct answer",
   "admin.quiz.opened": "The quiz is now open for all teams",
   "admin.quiz.closed": "The quiz is closed",
-
   "admin.quiz.control": "Quiz console",
   "admin.quiz.start": "▶️ Start quiz",
   "admin.quiz.restart": "🔁 Restart",
@@ -304,7 +285,6 @@
   "admin.quiz.phase_finished": "Quiz finished",
   "admin.quiz.phase_question_hint": "Teams are answering. You can add time or show the standings early.",
   "admin.quiz.phase_standings_hint": "Participants see the correct answer and team ranks.",
-
   "admin.subs.title": "All team answers",
   "admin.subs.filter_task": "All tasks",
   "admin.subs.filter_team": "All teams",
@@ -321,11 +301,9 @@
   "admin.subs.reset_all": "Reset all answers",
   "admin.subs.confirm_reset_all": "Delete answers for every task (including new ones) together with files and likes? Task points will be reset.",
   "admin.subs.reset_done": "All answers deleted",
-
   "admin.rating.reset_scores": "Reset all scores",
   "admin.rating.confirm_reset_scores": "Reset the ranking for every team? Task, quiz and bonus points will become zero. Task answers themselves will stay.",
   "admin.rating.scores_reset": "All scores have been reset",
-
   "admin.messages.title": "Participant questions",
   "admin.messages.hint": "Messages from leaders and members. The author sees your reply.",
   "admin.messages.empty": "Nobody has written yet",
@@ -335,7 +313,6 @@
   "admin.messages.reset_all": "Delete all chats",
   "admin.messages.confirm_reset_all": "Delete every admin conversation and every team chat? This cannot be undone.",
   "admin.messages.reset_done": "All chats deleted",
-
   "admin.votes.title": "Voting results",
   "admin.votes.reset": "Reset all votes",
   "admin.votes.confirm_reset": "Delete all votes?",
@@ -352,7 +329,6 @@
   "admin.votes.reset_likes": "Reset project likes",
   "admin.votes.confirm_reset_likes": "Delete all likes for Task 3 projects?",
   "admin.votes.likes_reset": "Project likes have been reset",
-
   "admin.round.title": "Task {n} control",
   "admin.round.hint": "Teams get one hour for the project. When time is up, projects open for like voting.",
   "admin.round.start": "▶️ Start the hour",
@@ -374,7 +350,6 @@
   "admin.round.confirm_reset": "Reset this task and delete its likes?",
   "admin.round.applied": "Command applied",
   "admin.round.settings_saved": "Timing saved",
-
   "vote.round.title": "Vote for Task {n}",
   "vote.round.hint": "Like the project you prefer. You can change your like. You cannot vote for your own team.",
   "vote.round.closed_hint": "Voting is closed. The winner is decided by likes.",
@@ -385,7 +360,6 @@
   "vote.round.empty": "Teams have not submitted projects yet",
   "vote.round.no_desc": "No description",
   "vote.round.own": "This is your team's project",
-
   "tasks.round.live": "Task {n} hour is running",
   "tasks.round.live_hint": "Send a photo and a short project description before the timer ends.",
   "tasks.round.wait_start": "The administrator has not started Task {n} yet.",
@@ -393,7 +367,6 @@
   "tasks.round.locked": "Task {n} submissions are closed",
   "tasks.round.sealed_title": "Task {n}",
   "tasks.round.sealed_hint": "The text is hidden. It will appear when the administrator opens access.",
-
   "admin.task3.title": "Task 3 control",
   "admin.task3.hint": "Teams get one hour for the project. When time is up, projects open for like voting.",
   "admin.task3.start": "▶️ Start the hour",
@@ -415,7 +388,28 @@
   "admin.task3.confirm_reset": "Reset Task 3 and delete all likes?",
   "admin.task3.applied": "Command applied",
   "admin.task3.settings_saved": "Timing saved",
-
   "admin.rating.title": "Overall rating",
-  "admin.rating.hint": "Administrators see every team, including those without submissions"
+  "admin.rating.hint": "Administrators see every team, including those without submissions",
+  "admin.media.photo": "Photo",
+  "admin.media.choose": "Add photo",
+  "admin.media.replace": "Replace photo",
+  "admin.media.remove": "Remove photo",
+  "admin.media.hint": "JPG, PNG, WEBP or GIF, up to 15 MB. The photo is saved when you press Save.",
+  "admin.media.bad_type": "Only images can be uploaded",
+  "admin.quiz.add_question": "Add question",
+  "admin.quiz.new_question": "New question",
+  "admin.quiz.edit_question": "Edit question",
+  "admin.quiz.delete_question": "Delete question",
+  "admin.quiz.confirm_delete_question": "Delete this question together with the teams' answers?",
+  "admin.quiz.question_text": "Question text",
+  "admin.quiz.options": "Answer options",
+  "admin.quiz.is_correct": "correct answer",
+  "admin.quiz.mark_correct": "mark as correct",
+  "admin.quiz.add_option": "Add option",
+  "admin.quiz.remove_option": "Remove option",
+  "admin.quiz.points": "Points for a correct answer",
+  "admin.quiz.edit_hint": "Filling in one language is enough; empty languages are filled automatically. Select the correct option with the radio button.",
+  "admin.quiz.question_saved": "Question saved",
+  "admin.quiz.question_created": "Question added",
+  "admin.quiz.question_deleted": "Question deleted"
 }

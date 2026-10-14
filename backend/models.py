@@ -35,6 +35,11 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def media_url(stored_name: str | None) -> str:
+    """Публичный путь к картинке задания или вопроса (uploads/media/)."""
+    return f"/api/media/{stored_name}" if stored_name else ""
+
+
 def _pick(obj, prefix: str, lang: str) -> str:
     """Вернуть локализованное поле prefix_<lang> с откатом на ru → en → kk."""
     for code in (lang, "ru", "en", "kk"):
@@ -194,6 +199,7 @@ class Task(db.Model):
     max_points = db.Column(db.Integer, default=10, nullable=False)
     allow_files = db.Column(db.Boolean, default=True, nullable=False)
     is_published = db.Column(db.Boolean, default=True, nullable=False)
+    image = db.Column(db.String(255), default="", nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
     submissions = db.relationship("Submission", back_populates="task",
@@ -208,6 +214,7 @@ class Task(db.Model):
             "max_points": self.max_points,
             "allow_files": self.allow_files,
             "is_published": self.is_published,
+            "image_url": media_url(self.image),
             "created_at": self.created_at.isoformat(),
             "submissions_count": len(self.submissions),
         }
@@ -524,6 +531,7 @@ class Question(db.Model):
     options_en = db.Column(db.Text, default="[]")
     correct_index = db.Column(db.Integer, default=0, nullable=False)
     points = db.Column(db.Integer, default=2, nullable=False)
+    image = db.Column(db.String(255), default="", nullable=False)
 
     quiz = db.relationship("Quiz", back_populates="questions")
     answers = db.relationship("QuizAnswer", back_populates="question",
@@ -548,9 +556,27 @@ class Question(db.Model):
             "text": _pick(self, "text", lang),
             "options": self.options(lang),
             "points": self.points,
+            "image_url": media_url(self.image),
         }
         if reveal:
             data["correct_index"] = self.correct_index
+        return data
+
+    def to_admin_dict(self) -> dict:
+        """Все языковые версии вопроса — для редактора в панели администратора."""
+        data = {
+            "id": self.id,
+            "order": self.order,
+            "correct_index": self.correct_index,
+            "points": self.points,
+            "image_url": media_url(self.image),
+        }
+        for code in ("kk", "ru", "en"):
+            data[f"text_{code}"] = getattr(self, f"text_{code}") or ""
+            try:
+                data[f"options_{code}"] = json.loads(getattr(self, f"options_{code}") or "[]")
+            except (TypeError, ValueError):
+                data[f"options_{code}"] = []
         return data
 
 

@@ -1,12 +1,10 @@
 {
-  "app.name": "TIGER MasterClass",
+  "app.name": "Жас Ұстаз",
   "app.subtitle": "Школьный мастер-класс",
   "lang.name": "РУССКИЙ",
-
   "role.admin": "Администратор",
   "role.leader": "Лидер команды",
   "role.member": "Участник",
-
   "login.title": "Вход в систему",
   "login.subtitle": "Введите логин и пароль, выданные организаторами",
   "login.login": "Логин",
@@ -19,7 +17,6 @@
   "login.error_bad": "Неверный логин или пароль",
   "login.hint": "Роль определяется автоматически по вашему логину",
   "login.show_password": "Показать пароль",
-
   "nav.tasks": "Задания",
   "nav.quiz": "Тест",
   "nav.voting": "Голосование",
@@ -27,26 +24,23 @@
   "nav.team": "Команда",
   "nav.logout": "Выход",
   "nav.messages": "Админу",
-
   "profile.title": "Мой профиль",
   "profile.hint": "Расскажите о себе — так администраторам и команде будет проще вас узнать",
   "profile.name": "Как вас зовут",
   "profile.name_ph": "Имя и фамилия",
   "profile.school": "Школа",
   "profile.school_ph": "Название школы",
-  "profile.grade": "Класс",
-  "profile.grade_ph": "например, 9А",
+  "profile.grade": "Профессия",
+  "profile.grade_ph": "например, учитель",
   "profile.about": "О себе",
   "profile.about_ph": "Коротко: интересы, чем занимаетесь",
   "profile.saved": "Профиль сохранён",
-
   "messages.title": "Написать администратору",
   "messages.hint": "Задайте вопрос организаторам. Ответ появится здесь у всех администраторов.",
   "messages.ph": "Ваш вопрос…",
   "messages.empty": "Напишите сообщение",
   "messages.empty_thread": "Пока нет сообщений. Напишите вопрос — администратор ответит здесь.",
   "messages.admin": "Администратор",
-
   "common.loading": "Загрузка...",
   "common.save": "Сохранить",
   "common.cancel": "Отмена",
@@ -67,7 +61,6 @@
   "common.open": "Открыть",
   "common.copy": "Копировать",
   "common.copied": "Скопировано",
-
   "tasks.title": "Лента заданий",
   "tasks.hint": "Задания от администратора для всех команд",
   "tasks.empty": "Заданий пока нет. Ждите объявления администратора.",
@@ -92,7 +85,6 @@
   "tasks.no_answer_yet": "Команда ещё не отправила ответ",
   "tasks.files": "Файлы",
   "tasks.remove_file": "Удалить файл",
-
   "quiz.title": "Тест",
   "quiz.hint": "Вопросы идут по одному и появляются у всех команд одновременно",
   "quiz.closed": "Тест закрыт",
@@ -116,7 +108,6 @@
   "quiz.waiting": "Ожидание ответа лидера",
   "quiz.progress": "Прогресс",
   "quiz.finished": "Все вопросы отвечены! Отличная работа!",
-
   "quiz.time_left": "Осталось секунд",
   "quiz.next_question_in": "До следующего вопроса",
   "quiz.waiting_start": "Тест скоро начнётся",
@@ -132,7 +123,6 @@
   "quiz.paused": "Тест приостановлен администратором",
   "quiz.final_title": "Тест завершён",
   "quiz.final_hint": "Верных ответов: {correct} из {total} · {points} балл(ов)",
-
   "vote.title": "Голосование за секции",
   "vote.hint": "Выберите одну секцию мастер-класса. Голос можно изменить.",
   "vote.your_choice": "Ваш выбор",
@@ -154,13 +144,11 @@
   "vote.task3.empty": "Команды ещё не отправили проекты",
   "vote.task3.no_desc": "Без описания",
   "vote.task3.own": "Это проект вашей команды",
-
   "tasks.task3.live": "Идёт час на задание №3",
   "tasks.task3.live_hint": "Отправьте фото и краткое описание проекта до конца таймера.",
   "tasks.task3.wait_start": "Администратор ещё не запустил задание №3.",
   "tasks.task3.ended": "Время задания №3 вышло. Проекты и голосование — в разделе «Голосование».",
   "tasks.task3.locked": "Приём ответов на задание №3 закрыт",
-
   "rating.title": "Рейтинг команд",
   "rating.hint": "Обновляется автоматически. Команды без отправок не отображаются.",
   "rating.top": "ТОП-10",
@@ -176,7 +164,6 @@
   "rating.your_team": "Ваша команда",
   "rating.teams_ranked": "команд в рейтинге",
   "rating.not_ranked": "Ваша команда появится в рейтинге после первой отправки",
-
   "team.title": "Моя команда",
   "team.hint": "Состав команды и её результаты",
   "team.name": "Название команды",
@@ -198,7 +185,6 @@
   "team.chat_clear": "Очистить чат",
   "team.chat_confirm_clear": "Удалить все сообщения из командного чата?",
   "team.chat_cleared": "Командный чат очищен",
-
   "admin.title": "Панель администратора",
   "admin.tab.overview": "Обзор",
   "admin.tab.teams": "Команды",
@@ -208,7 +194,6 @@
   "admin.tab.votes": "Голоса",
   "admin.tab.messages": "Сообщения",
   "admin.tab.rating": "Рейтинг",
-
   "admin.stats.teams": "Команд",
   "admin.stats.active_teams": "Активных команд",
   "admin.stats.users": "Аккаунтов",
@@ -223,7 +208,6 @@
   "admin.passwords": "Пароли мероприятия",
   "admin.password_participants": "Участники и лидеры",
   "admin.password_admins": "Администраторы",
-
   "admin.teams.search_ph": "Поиск по команде или логину",
   "admin.teams.rename": "Переименовать",
   "admin.teams.edit_login": "Изменить логин",
@@ -244,7 +228,6 @@
   "admin.teams.login_changed": "Логин изменён",
   "admin.teams.moved": "Участник перенесён",
   "admin.teams.score_changed": "Баллы обновлены",
-
   "admin.tasks.new": "Новое задание",
   "admin.tasks.create": "Создать задание",
   "admin.tasks.edit": "Редактировать",
@@ -261,7 +244,6 @@
   "admin.tasks.updated": "Задание обновлено",
   "admin.tasks.deleted": "Задание удалено",
   "admin.tasks.empty": "Заданий нет",
-
   "admin.quiz.status": "Состояние теста",
   "admin.quiz.open": "Открыть тест для всех",
   "admin.quiz.close": "Закрыть тест",
@@ -276,7 +258,6 @@
   "admin.quiz.show_results": "Показывать правильный ответ",
   "admin.quiz.opened": "Тест открыт для всех команд",
   "admin.quiz.closed": "Тест закрыт",
-
   "admin.quiz.control": "Пульт теста",
   "admin.quiz.start": "▶️ Начать тест",
   "admin.quiz.restart": "🔁 Начать заново",
@@ -304,7 +285,6 @@
   "admin.quiz.phase_finished": "Тест завершён",
   "admin.quiz.phase_question_hint": "Команды отвечают. Можно добавить время или показать рейтинг досрочно.",
   "admin.quiz.phase_standings_hint": "Участники видят правильный ответ и места команд.",
-
   "admin.subs.title": "Все ответы команд",
   "admin.subs.filter_task": "Все задания",
   "admin.subs.filter_team": "Все команды",
@@ -321,11 +301,9 @@
   "admin.subs.reset_all": "Сбросить все ответы",
   "admin.subs.confirm_reset_all": "Удалить ответы на все задания (включая новые) вместе с файлами и лайками? Баллы за задания обнулятся.",
   "admin.subs.reset_done": "Все ответы удалены",
-
   "admin.rating.reset_scores": "Сбросить все баллы",
   "admin.rating.confirm_reset_scores": "Обнулить рейтинг всех команд? Баллы за задания, тест и бонусы станут нулём. Сами ответы на задания останутся.",
   "admin.rating.scores_reset": "Все баллы сброшены",
-
   "admin.messages.title": "Вопросы участников",
   "admin.messages.hint": "Сообщения от лидеров и участников. Ответ видит автор вопроса.",
   "admin.messages.empty": "Пока никто не писал",
@@ -335,7 +313,6 @@
   "admin.messages.reset_all": "Удалить все чаты",
   "admin.messages.confirm_reset_all": "Удалить все переписки с участниками и все командные чаты? Это нельзя отменить.",
   "admin.messages.reset_done": "Все чаты удалены",
-
   "admin.votes.title": "Результаты голосования",
   "admin.votes.reset": "Сбросить все голоса",
   "admin.votes.confirm_reset": "Удалить все голоса?",
@@ -352,7 +329,6 @@
   "admin.votes.reset_likes": "Сбросить лайки проектов",
   "admin.votes.confirm_reset_likes": "Удалить все лайки за проекты задания №3?",
   "admin.votes.likes_reset": "Лайки проектов сброшены",
-
   "admin.round.title": "Пульт задания №{n}",
   "admin.round.hint": "Командам даётся час на проект. Когда время выйдет, проекты откроются для голосования лайками.",
   "admin.round.start": "▶️ Начать час",
@@ -374,7 +350,6 @@
   "admin.round.confirm_reset": "Вернуть это задание в начало и удалить его лайки?",
   "admin.round.applied": "Команда выполнена",
   "admin.round.settings_saved": "Время сохранено",
-
   "vote.round.title": "Голосование за Задание №{n}",
   "vote.round.hint": "Поставьте лайк понравившемуся проекту. Голос можно изменить. За свой проект голосовать нельзя.",
   "vote.round.closed_hint": "Голосование закрыто. Победителя определяют лайки.",
@@ -385,7 +360,6 @@
   "vote.round.empty": "Команды ещё не отправили проекты",
   "vote.round.no_desc": "Без описания",
   "vote.round.own": "Это проект вашей команды",
-
   "tasks.round.live": "Идёт час на задание №{n}",
   "tasks.round.live_hint": "Отправьте фото и краткое описание проекта до конца таймера.",
   "tasks.round.wait_start": "Администратор ещё не запустил задание №{n}.",
@@ -393,7 +367,6 @@
   "tasks.round.locked": "Приём ответов на задание №{n} закрыт",
   "tasks.round.sealed_title": "Задание №{n}",
   "tasks.round.sealed_hint": "Текст скрыт. Откроется, когда администратор даст доступ.",
-
   "admin.task3.title": "Пульт задания №3",
   "admin.task3.hint": "Командам даётся час на проект. Когда время выйдет, проекты откроются для голосования лайками.",
   "admin.task3.start": "▶️ Начать час",
@@ -415,7 +388,28 @@
   "admin.task3.confirm_reset": "Вернуть задание №3 в начало и удалить все лайки?",
   "admin.task3.applied": "Команда выполнена",
   "admin.task3.settings_saved": "Время сохранено",
-
   "admin.rating.title": "Общий рейтинг",
-  "admin.rating.hint": "Администратор видит все команды, включая те, что ещё ничего не отправили"
+  "admin.rating.hint": "Администратор видит все команды, включая те, что ещё ничего не отправили",
+  "admin.media.photo": "Фото",
+  "admin.media.choose": "Добавить фото",
+  "admin.media.replace": "Заменить фото",
+  "admin.media.remove": "Убрать фото",
+  "admin.media.hint": "JPG, PNG, WEBP или GIF, до 15 МБ. Фото сохранится после нажатия «Сохранить».",
+  "admin.media.bad_type": "Можно загрузить только изображение",
+  "admin.quiz.add_question": "Добавить вопрос",
+  "admin.quiz.new_question": "Новый вопрос",
+  "admin.quiz.edit_question": "Редактировать вопрос",
+  "admin.quiz.delete_question": "Удалить вопрос",
+  "admin.quiz.confirm_delete_question": "Удалить этот вопрос вместе с ответами команд?",
+  "admin.quiz.question_text": "Текст вопроса",
+  "admin.quiz.options": "Варианты ответа",
+  "admin.quiz.is_correct": "правильный ответ",
+  "admin.quiz.mark_correct": "отметить правильным",
+  "admin.quiz.add_option": "Добавить вариант",
+  "admin.quiz.remove_option": "Удалить вариант",
+  "admin.quiz.points": "Баллы за правильный ответ",
+  "admin.quiz.edit_hint": "Достаточно заполнить один язык — пустые языки заполнятся автоматически. Отметьте кружком правильный вариант.",
+  "admin.quiz.question_saved": "Вопрос сохранён",
+  "admin.quiz.question_created": "Вопрос добавлен",
+  "admin.quiz.question_deleted": "Вопрос удалён"
 }

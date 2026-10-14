@@ -56,6 +56,7 @@ def list_tasks():
         if hidden:
             item["title"] = ""
             item["body"] = ""
+            item["image_url"] = ""
         payload.append(item)
 
     return json_ok(
@@ -166,6 +167,16 @@ def delete_attachment(submission_id: int, attachment_id: int):
     bump("submissions")
     db.session.commit()
     return json_ok()
+
+
+@bp.get("/media/<stored_name>")
+@require_auth
+def serve_media(stored_name: str):
+    """Картинка к заданию или вопросу теста: доступна всем вошедшим."""
+    from ..utils import MEDIA_FOLDER
+
+    folder = current_app.config["UPLOAD_DIR"] / MEDIA_FOLDER
+    return send_from_directory(folder, stored_name, as_attachment=False, max_age=3600)
 
 
 @bp.get("/files/<int:submission_id>/<path:stored_name>")

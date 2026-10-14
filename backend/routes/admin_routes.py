@@ -1,6 +1,8 @@
 """Панель администратора: команды, баллы, задания, тест, отправки, голоса."""
 from __future__ import annotations
 
+import json
+
 from flask import Blueprint, current_app, g, request
 
 from .. import quiz_engine
@@ -12,6 +14,7 @@ from ..models import (
     ROLE_MEMBER,
     Attachment,
     ProjectVote,
+    Question,
     Quiz,
     QuizAnswer,
     ScoreAdjustment,
@@ -25,7 +28,16 @@ from ..models import (
     bump,
     utcnow,
 )
-from ..utils import as_int, current_lang, json_err, json_ok, localized_payload
+from ..utils import (
+    as_int,
+    current_lang,
+    json_err,
+    json_ok,
+    localized_payload,
+    remove_media,
+    save_media,
+    validate_image,
+)
 
 bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 admin_only = require_role(ROLE_ADMIN)
@@ -415,10 +427,53 @@ def delete_task(task_id: int):
     db.session.query(TaskRound).filter_by(task_id=task_id).delete()
     for submission in task.submissions:
         _remove_submission_files(submission)
+    remove_media(task.image)
     db.session.delete(task)
     bump("tasks", "leaderboard", "submissions", "task3", "votes")
     db.session.commit()
     return json_ok()
+
+
+def _replace_image(target, field: str = "image"):
+    """Принять файл из поля «file», заменить картинку объекта. Вернёт ошибку или None."""
+    storage = request.files.get("file")
+    if storage is None or not storage.filename:
+        return json_err("no_file", "Выберите фото", 400)
+    valid, message = validate_image(storage)
+    if not valid:
+        return json_err("bad_file", message, 400)
+    remove_media(getattr(target, field))
+    setattr(target, field, save_media(storage))
+    return None
+
+
+@bp.post("/tasks/<int:task_id>/image")
+@admin_only
+def upload_task_image(task_id: int):
+    """Прикрепить или заменить фото к заданию."""
+    task = db.session.get(Task, task_id)
+    if task is None:
+        return json_err("not_found", "Задание не найдено", 404)
+    error = _replace_image(task)
+    if error is not None:
+        return error
+    bump("tasks")
+    db.session.commit()
+    return json_ok(task=task.to_dict(current_lang(), full=True))
+
+
+@bp.delete("/tasks/<int:task_id>/image")
+@admin_only
+def delete_task_image(task_id: int):
+    """Убрать фото задания."""
+    task = db.session.get(Task, task_id)
+    if task is None:
+        return json_err("not_found", "Задание не найдено", 404)
+    remove_media(task.image)
+    task.image = ""
+    bump("tasks")
+    db.session.commit()
+    return json_ok(task=task.to_dict(current_lang(), full=True))
 
 
 # --------------------------------------------------------------------------- #
@@ -527,17 +582,167 @@ def reset_quiz_answers():
     return json_ok(deleted=len(rows))
 
 
+MIN_OPTIONS = 2
+MAX_OPTIONS = 6
+LANG_CODES = ("kk", "ru", "en")
+
+
+def _clean_options(raw) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    return [str(item or "").strip()[:300] for item in raw]
+
+
+def _question_payload(data: dict) -> tuple[dict | None, object | None]:
+    """Тексты, варианты всех языков и правильный ответ. Пустые языки берут текст из ru/en/kk."""
+    texts = localized_payload("text", data)
+    if not texts["text_ru"]:
+        return None, json_err("bad_text", "Введите текст вопроса", 400)
+
+    lists = {code: _clean_options(data.get(f"options_{code}")) for code in LANG_CODES}
+    base = next((lists[code] for code in ("ru", "en", "kk") if any(lists[code])), [])
+    if len(base) < MIN_OPTIONS or len(base) > MAX_OPTIONS:
+        return None, json_err(
+            "bad_options", f"Нужно от {MIN_OPTIONS} до {MAX_OPTIONS} вариантов ответа", 400,
+        )
+    if not all(base):
+        return None, json_err("bad_options", "Заполните текст каждого варианта", 400)
+
+    options = {}
+    for code in LANG_CODES:
+        items = lists[code][:len(base)]
+        items += [""] * (len(base) - len(items))
+        options[f"options_{code}"] = json.dumps(
+            [item or base[index] for index, item in enumerate(items)], ensure_ascii=False,
+        )
+
+    correct = as_int(data.get("correct_index"), -1)
+    if correct < 0 or correct >= len(base):
+        return None, json_err("bad_correct", "Отметьте правильный вариант ответа", 400)
+
+    points = as_int(data.get("points"), 2)
+    if points < 0 or points > 100:
+        return None, json_err("bad_points", "Баллы за вопрос: от 0 до 100", 400)
+
+    return {**texts, **options, "correct_index": correct, "points": points}, None
+
+
+def _rescore_answers(question: Question) -> None:
+    """Пересчитать уже данные ответы, если сменился правильный вариант или баллы."""
+    for row in question.answers:
+        row.is_correct = row.selected_index == question.correct_index
+        row.points = question.points if row.is_correct else 0
+
+
+def _renumber_questions(quiz: Quiz) -> None:
+    for index, row in enumerate(sorted(quiz.questions, key=lambda q: (q.order, q.id)), start=1):
+        row.order = index
+
+
 @bp.get("/quiz/questions")
 @admin_only
 def quiz_questions():
+    """Все вопросы теста со всеми языками, вариантами и правильным ответом."""
     lang = current_lang()
     quiz = quiz_engine.get_quiz()
     if quiz is None:
         return json_ok(questions=[])
     return json_ok(
         quiz=quiz.to_dict(lang),
-        questions=[q.to_dict(lang, reveal=True) for q in quiz.questions],
+        questions=[q.to_admin_dict() for q in quiz.questions],
     )
+
+
+@bp.post("/quiz/questions")
+@admin_only
+def create_question():
+    """Добавить вопрос в конец теста."""
+    quiz = quiz_engine.get_quiz()
+    if quiz is None:
+        return json_err("not_found", "Тест не найден", 404)
+    values, error = _question_payload(request.get_json(silent=True) or {})
+    if error is not None:
+        return error
+    last = max((q.order for q in quiz.questions), default=0)
+    question = Question(quiz_id=quiz.id, order=last + 1, **values)
+    db.session.add(question)
+    bump("quiz")
+    db.session.commit()
+    return json_ok(question=question.to_admin_dict())
+
+
+@bp.patch("/quiz/questions/<int:question_id>")
+@admin_only
+def update_question(question_id: int):
+    """Изменить текст, варианты, правильный ответ или баллы вопроса."""
+    question = db.session.get(Question, question_id)
+    if question is None:
+        return json_err("not_found", "Вопрос не найден", 404)
+    data = {**question.to_admin_dict(), **(request.get_json(silent=True) or {})}
+    values, error = _question_payload(data)
+    if error is not None:
+        return error
+    rescore = (values["correct_index"] != question.correct_index
+               or values["points"] != question.points)
+    for field, value in values.items():
+        setattr(question, field, value)
+    if rescore:
+        _rescore_answers(question)
+    bump("quiz", "leaderboard")
+    db.session.commit()
+    return json_ok(question=question.to_admin_dict())
+
+
+@bp.delete("/quiz/questions/<int:question_id>")
+@admin_only
+def delete_question(question_id: int):
+    """Удалить вопрос вместе с ответами команд. Во время идущего теста нельзя."""
+    question = db.session.get(Question, question_id)
+    if question is None:
+        return json_err("not_found", "Вопрос не найден", 404)
+    quiz = question.quiz
+    quiz_engine.ensure_progress(quiz)
+    if quiz.is_live:
+        return json_err("quiz_live", "Остановите тест, прежде чем удалять вопросы", 409)
+    remove_media(question.image)
+    db.session.delete(question)
+    db.session.flush()
+    db.session.refresh(quiz)
+    _renumber_questions(quiz)
+    if quiz.current_index >= len(quiz.questions):
+        quiz.current_index = max(0, len(quiz.questions) - 1)
+    bump("quiz", "leaderboard")
+    db.session.commit()
+    return json_ok()
+
+
+@bp.post("/quiz/questions/<int:question_id>/image")
+@admin_only
+def upload_question_image(question_id: int):
+    """Прикрепить или заменить фото к вопросу теста."""
+    question = db.session.get(Question, question_id)
+    if question is None:
+        return json_err("not_found", "Вопрос не найден", 404)
+    error = _replace_image(question)
+    if error is not None:
+        return error
+    bump("quiz")
+    db.session.commit()
+    return json_ok(question=question.to_admin_dict())
+
+
+@bp.delete("/quiz/questions/<int:question_id>/image")
+@admin_only
+def delete_question_image(question_id: int):
+    """Убрать фото вопроса."""
+    question = db.session.get(Question, question_id)
+    if question is None:
+        return json_err("not_found", "Вопрос не найден", 404)
+    remove_media(question.image)
+    question.image = ""
+    bump("quiz")
+    db.session.commit()
+    return json_ok(question=question.to_admin_dict())
 
 
 # --------------------------------------------------------------------------- #

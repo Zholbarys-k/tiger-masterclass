@@ -147,6 +147,7 @@ function taskCardHtml(task, canSubmit, sealed) {
         <span class="badge badge--accent">${task.max_points} ${escapeHtml(t("common.pts"))}</span>
       </div>
       <div class="card__body">
+        ${task.image_url ? `<img class="content-image" src="${fileUrl(task.image_url)}" alt="">` : ""}
         <div>${nl2br(task.body)}</div>
         <div style="margin-top:var(--space-4)">
           ${submissionHtml(task)}
