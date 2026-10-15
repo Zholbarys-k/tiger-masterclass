@@ -25,7 +25,7 @@ from ..models import (
     bump,
     utcnow,
 )
-from ..utils import as_int, current_lang, json_err, json_ok, localized_payload
+from ..utils import json_object, as_int, current_lang, json_err, json_ok, localized_payload
 
 bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 admin_only = require_role(ROLE_ADMIN)
@@ -80,7 +80,7 @@ def update_team(team_id: int):
     if team is None:
         return json_err("not_found", "Команда не найдена", 404)
 
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     if "name" in data:
         name = (data["name"] or "").strip()
         if not name:
@@ -105,7 +105,7 @@ def update_user(user_id: int):
     if user is None:
         return json_err("not_found", "Пользователь не найден", 404)
 
-    data = request.get_json(silent=True) or {}
+    data = json_object()
 
     if "login" in data:
         login = (data["login"] or "").strip().lower()
@@ -207,7 +207,7 @@ def adjust_score(team_id: int):
     if team is None:
         return json_err("not_found", "Команда не найдена", 404)
 
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     reason = (data.get("reason") or "Правка администратора")[:255]
 
     if "set_total" in data and data["set_total"] not in (None, ""):
@@ -263,7 +263,7 @@ def set_submission_points(submission_id: int):
     submission = db.session.get(Submission, submission_id)
     if submission is None:
         return json_err("not_found", "Ответ не найден", 404)
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     points = as_int(data.get("points"), 0)
     max_points = submission.task.max_points if submission.task else 100
     submission.points = max(0, min(points, max_points))
@@ -319,7 +319,7 @@ def delete_submission(submission_id: int):
 @admin_only
 def reset_submissions():
     """Сброс ответов: всех сразу или только по заданию / команде."""
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     query = db.session.query(Submission)
     if data.get("task_id"):
         query = query.filter_by(task_id=as_int(data["task_id"]))
@@ -356,7 +356,7 @@ def admin_tasks():
 @bp.post("/tasks")
 @admin_only
 def create_task():
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     titles = localized_payload("title", data)
     bodies = localized_payload("body", data)
     if not titles["title_ru"] and not titles["title_en"] and not titles["title_kk"]:
@@ -386,7 +386,7 @@ def update_task(task_id: int):
     if task is None:
         return json_err("not_found", "Задание не найдено", 404)
 
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     for prefix in ("title", "body"):
         if any(f"{prefix}_{code}" in data for code in ("kk", "ru", "en")):
             for field, value in localized_payload(prefix, data).items():
@@ -431,7 +431,7 @@ def toggle_quiz():
     quiz = quiz_engine.get_quiz()
     if quiz is None:
         return json_err("not_found", "Тест не найден", 404)
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     if "show_results" in data:
         quiz_engine.settings(quiz, {"show_results": data["show_results"]})
     quiz_engine.set_open(quiz, bool(data.get("is_open", not quiz.is_open)))
@@ -446,7 +446,7 @@ def control_quiz():
     if quiz is None:
         return json_err("not_found", "Тест не найден", 404)
 
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     action = (data.get("action") or "").strip().lower()
     quiz_engine.ensure_progress(quiz)
 
@@ -487,7 +487,7 @@ def quiz_settings():
     quiz = quiz_engine.get_quiz()
     if quiz is None:
         return json_err("not_found", "Тест не найден", 404)
-    quiz_engine.settings(quiz, request.get_json(silent=True) or {})
+    quiz_engine.settings(quiz, json_object())
     return json_ok(quiz=quiz.to_dict(current_lang()))
 
 
@@ -512,7 +512,7 @@ def reset_quiz_answers():
 
     Фаза и текущий вопрос не меняются — команды смогут ответить заново.
     """
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     query = db.session.query(QuizAnswer)
     if data.get("question_id"):
         query = query.filter_by(question_id=as_int(data["question_id"]))
@@ -549,7 +549,7 @@ def update_section(section_id: int):
     section = db.session.get(Section, section_id)
     if section is None:
         return json_err("not_found", "Секция не найдена", 404)
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     if "is_open" in data:
         section.is_open = bool(data["is_open"])
     for prefix in ("name", "desc"):
@@ -599,7 +599,7 @@ def control_round(task_id: int):
     if row is None:
         return json_err("not_found", "Для этого задания нет пульта", 404)
     task3_engine.ensure_progress(row)
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     action = (data.get("action") or "").strip().lower()
 
     if action == "start":
@@ -632,7 +632,7 @@ def round_settings(task_id: int):
     row = task3_engine.get_round(task_id)
     if row is None:
         return json_err("not_found", "Для этого задания нет пульта", 404)
-    task3_engine.settings(row, request.get_json(silent=True) or {})
+    task3_engine.settings(row, json_object())
     return json_ok(round=row.to_dict())
 
 

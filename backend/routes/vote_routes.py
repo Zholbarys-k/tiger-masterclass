@@ -6,7 +6,7 @@ from flask import Blueprint, g, request
 from ..auth import require_auth, require_role
 from ..db import db
 from ..models import ROLE_ADMIN, ROLE_LEADER, ROLE_MEMBER, ProjectVote, Section, Submission, Vote, bump, utcnow
-from ..utils import current_lang, json_err, json_ok
+from ..utils import json_object, current_lang, json_err, json_ok
 
 bp = Blueprint("votes", __name__, url_prefix="/api")
 
@@ -43,7 +43,7 @@ def sections():
 @require_role(ROLE_LEADER, ROLE_MEMBER)
 def cast_vote():
     """Один голос на пользователя; повторный вызов меняет выбор."""
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     section_id = data.get("section_id")
     section = db.session.get(Section, section_id) if section_id else None
     if section is None:
@@ -118,7 +118,7 @@ def like_project():
     """Один лайк на задание; повторный вызов меняет выбор."""
     from ..task3_engine import ensure_progress, get_round
 
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     submission_id = data.get("submission_id")
     submission = db.session.get(Submission, submission_id) if submission_id else None
     if submission is None or not submission.task_id:

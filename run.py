@@ -36,8 +36,6 @@ def print_banner() -> None:
         print("  ВНИМАНИЕ: база пуста — выполните: python scripts/init_db.py")
     print(f"  Локально:      http://127.0.0.1:{Config.PORT}")
     print(f"  В сети Wi-Fi:  http://{local_ip()}:{Config.PORT}")
-    print(f"  Пароль участников: {Config.PARTICIPANT_PASSWORD}")
-    print(f"  Пароль админов:    {Config.ADMIN_PASSWORD}")
     print("=" * 62 + "\n")
 
 
