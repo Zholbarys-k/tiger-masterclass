@@ -104,6 +104,8 @@ def submit(task_id: int):
 
     text = (request.form.get("text") or "").strip()
     files = [f for f in request.files.getlist("files") if f and f.filename]
+    if files and not task.allow_files:
+        return json_err("files_disabled", "Для этого задания загрузка файлов отключена", 400)
 
     if not text and not files:
         return json_err("empty_submission", "Добавьте текст ответа или файл", 400)
@@ -119,6 +121,8 @@ def submit(task_id: int):
 
     submission = (db.session.query(Submission)
                   .filter_by(task_id=task_id, team_id=g.user.team_id).one_or_none())
+    if len(files) + (len(submission.attachments) if submission else 0) > limit:
+        return json_err("too_many_files", f"Можно прикрепить не более {limit} файлов", 400)
     created = submission is None
     if created:
         submission = Submission(
@@ -186,6 +190,8 @@ def serve_file(submission_id: int, stored_name: str):
         (row for row in submission.attachments if row.stored_name == stored_name),
         None,
     )
+    if attachment is None:
+        return json_err("not_found", "Файл не найден", 404)
     return send_from_directory(
         folder,
         stored_name,

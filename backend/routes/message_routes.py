@@ -7,7 +7,7 @@ from sqlalchemy import func
 from ..auth import require_auth, require_role
 from ..db import db
 from ..models import ROLE_ADMIN, ROLE_LEADER, ROLE_MEMBER, Message, TeamMessage, User, bump, utcnow
-from ..utils import json_err, json_ok
+from ..utils import json_object, json_err, json_ok
 
 bp = Blueprint("messages", __name__, url_prefix="/api")
 
@@ -72,7 +72,7 @@ def my_messages():
 @require_role(ROLE_LEADER, ROLE_MEMBER)
 def send_message():
     """Вопрос администраторам от участника или лидера."""
-    body = _clean_body((request.get_json(silent=True) or {}).get("body"))
+    body = _clean_body((json_object()).get("body"))
     if not body:
         return json_err("empty", "Напишите сообщение", 400)
 
@@ -144,7 +144,7 @@ def admin_reply(user_id: int):
     person = db.session.get(User, user_id)
     if person is None or person.role == ROLE_ADMIN:
         return json_err("not_found", "Участник не найден", 404)
-    body = _clean_body((request.get_json(silent=True) or {}).get("body"))
+    body = _clean_body((json_object()).get("body"))
     if not body:
         return json_err("empty", "Напишите сообщение", 400)
 
@@ -204,7 +204,7 @@ def send_team_message():
     team_id = _require_team_id()
     if not team_id:
         return json_err("no_team", "Вы не в команде", 400)
-    body = _clean_body((request.get_json(silent=True) or {}).get("body"))
+    body = _clean_body((json_object()).get("body"))
     if not body:
         return json_err("empty", "Напишите сообщение", 400)
     record = TeamMessage(

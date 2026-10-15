@@ -14,6 +14,7 @@ export const store = {
 const listeners = new Map();   // key -> Set<callback>
 let timer = null;
 let firstPollDone = false;
+let polling = false;
 
 export function subscribe(keys, callback) {
   const list = Array.isArray(keys) ? keys : [keys];
@@ -40,6 +41,8 @@ function emit(changedKeys) {
 }
 
 async function poll() {
+  if (polling) return;
+  polling = true;
   try {
     const data = await api.state();
     const changed = [];
@@ -59,7 +62,13 @@ async function poll() {
     if (changed.length) emit(changed);
   } catch (error) {
     document.body.dataset.online = "0";
+  } finally {
+    polling = false;
   }
+}
+
+function onVisibilityChange() {
+  if (document.visibilityState === "visible") poll();
 }
 
 export function startPolling() {
@@ -68,14 +77,13 @@ export function startPolling() {
   timer = setInterval(() => {
     if (document.visibilityState === "visible") poll();
   }, POLL_INTERVAL);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") poll();
-  });
+  document.addEventListener("visibilitychange", onVisibilityChange);
 }
 
 export function stopPolling() {
   if (timer) clearInterval(timer);
   timer = null;
+  document.removeEventListener("visibilitychange", onVisibilityChange);
 }
 
 export function forcePoll() {

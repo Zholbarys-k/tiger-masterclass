@@ -178,6 +178,22 @@ def _register_frontend(app: Flask) -> None:
 
 
 def _register_errors(app: Flask) -> None:
+    @app.errorhandler(400)
+    def bad_request(_error):
+        return jsonify({
+            "ok": False, "error": "bad_request", "message": "Некорректные данные запроса",
+        }), 400
+
+    @app.errorhandler(405)
+    def method_not_allowed(error):
+        from flask import request
+
+        if request.path.startswith("/api/"):
+            return jsonify({
+                "ok": False, "error": "method_not_allowed", "message": "Метод не поддерживается",
+            }), 405
+        return error, 405
+
     @app.errorhandler(413)
     def too_large(_error):
         limit = app.config["MAX_FILE_SIZE"] // (1024 * 1024)

@@ -18,7 +18,7 @@ from ..models import (
     utcnow,
 )
 from ..quiz_engine import ensure_progress, get_quiz
-from ..utils import as_int, current_lang, json_err, json_ok
+from ..utils import json_object, as_int, current_lang, json_err, json_ok
 from .leaderboard_routes import build_leaderboard
 
 bp = Blueprint("quiz", __name__, url_prefix="/api/quiz")
@@ -73,18 +73,19 @@ def quiz_state():
 
     question = quiz.current_question if quiz.phase in (PHASE_QUESTION, PHASE_STANDINGS) else None
     show_correct = quiz.phase in (PHASE_STANDINGS, PHASE_FINISHED) or is_admin
+    reveal_results = show_correct and (quiz.show_results or is_admin)
 
     question_payload = None
     if question is not None and (quiz.is_open or is_admin):
         my_answer = answers.get(question.id)
         question_payload = question.to_dict(
-            lang, reveal=show_correct and (quiz.show_results or is_admin),
+            lang, reveal=reveal_results,
         )
         question_payload["number"] = quiz.current_index + 1
         question_payload["my_answer"] = {
             "selected_index": my_answer.selected_index,
-            "is_correct": my_answer.is_correct,
-            "points": my_answer.points,
+            "is_correct": my_answer.is_correct if reveal_results else None,
+            "points": my_answer.points if reveal_results else None,
         } if my_answer else None
         question_payload["answered"] = my_answer is not None
 
@@ -150,11 +151,11 @@ def answer():
     if current is None:
         return json_err("question_not_found", "Вопрос не найден", 404)
 
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     question_id = as_int(data.get("question_id"), 0)
     selected_index = as_int(data.get("selected_index"), -1)
 
-    if question_id and question_id != current.id:
+    if question_id != current.id:
         return json_err("stale_question", "Вопрос уже сменился", 409)
 
     options = current.options(current_lang())
@@ -183,7 +184,6 @@ def answer():
         accepted=True,
         selected_index=selected_index,
         remaining_seconds=quiz.remaining_seconds,
-        stats=question_stats(current),
     )
 
 

@@ -6,7 +6,7 @@ from flask import Blueprint, g, request
 from ..auth import check_password, create_token, require_auth, revoke_token, touch_login
 from ..db import db
 from ..models import ROLE_ADMIN, User
-from ..utils import json_err, json_ok
+from ..utils import json_object, json_err, json_ok
 
 bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
@@ -14,7 +14,7 @@ bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 @bp.post("/login")
 def login():
     """Вход по логину и общему паролю. Роль определяется по логину."""
-    data = request.get_json(silent=True) or {}
+    data = json_object()
     login_value = (data.get("login") or "").strip().lower()
     password = data.get("password") or ""
 
@@ -60,7 +60,7 @@ def me():
 @require_auth
 def update_profile():
     """Участник или лидер заполняет данные о себе."""
-    data = request.get_json(silent=True) or {}
+    data = json_object()
 
     if "display_name" in data:
         g.user.display_name = (data.get("display_name") or "").strip()[:120]
