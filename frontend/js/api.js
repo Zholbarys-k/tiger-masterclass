@@ -166,8 +166,8 @@ export const api = {
     request(`/api/submissions/${submissionId}/attachments/${attachmentId}`, { method: "DELETE" }),
 
   // --- голосование ---
-  sections: () => request("/api/sections"),
-  vote: (sectionId) => request("/api/votes", { method: "POST", json: { section_id: sectionId } }),
+  cards: () => request("/api/cards"),
+  pickCard: (number) => request("/api/cards/pick", { method: "POST", json: { number } }),
   projects: () => request("/api/projects"),
   likeProject: (submissionId) =>
     request("/api/projects/like", { method: "POST", json: { submission_id: submissionId } }),
@@ -231,9 +231,10 @@ export const api = {
     quizResults: () => request("/api/quiz/results"),
     quizQuestions: () => request("/api/admin/quiz/questions"),
     allVotes: () => request("/api/votes/all"),
-    updateSection: (sectionId, payload) =>
-      request(`/api/admin/sections/${sectionId}`, { method: "PATCH", json: payload }),
-    resetVotes: () => request("/api/admin/votes/reset", { method: "POST" }),
+    releaseCard: (number) => request(`/api/cards/${number}/release`, { method: "POST" }),
+    resetCards: () => request("/api/cards/reset", { method: "POST" }),
+    setCardsVisible: (visible) =>
+      request("/api/cards/visibility", { method: "POST", json: { visible } }),
     rounds: () => request("/api/admin/rounds"),
     roundControl: (taskId, action, payload = {}) =>
       request(`/api/admin/rounds/${taskId}/control`, { method: "POST", json: { action, ...payload } }),

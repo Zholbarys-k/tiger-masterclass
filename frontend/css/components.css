@@ -591,3 +591,87 @@
 .qedit-option__correct input { width: 18px; height: 18px; accent-color: #34d399; }
 .qedit-lang { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: var(--space-2); }
 .qedit-lang__tag { font-size: 0.7rem; font-weight: 700; color: var(--clr-muted, #9aa4c7); letter-spacing: 0.04em; }
+
+/* ---------- Карточки кабинетов (переворачиваются) ---------- */
+.flip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+.flip-card {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  perspective: 900px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.flip-card:disabled { cursor: default; }
+.flip-card__inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.flip-card.is-flipped .flip-card__inner { transform: rotateY(180deg); }
+.flip-card__face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: 16px;
+  border: 1px solid var(--clr-border);
+  text-align: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-card__front {
+  background: linear-gradient(145deg, rgba(255, 159, 28, 0.22), rgba(255, 255, 255, 0.05));
+  border-color: rgba(255, 159, 28, 0.55);
+}
+.flip-card:not(:disabled):hover .flip-card__front,
+.flip-card:not(:disabled):focus-visible .flip-card__front {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(255, 130, 30, 0.3);
+}
+.flip-card__front { transition: transform 0.2s, box-shadow 0.2s; }
+.flip-card__num { font-size: clamp(2.6rem, 14vw, 4rem); font-weight: 800; line-height: 1; color: var(--clr-accent); }
+.flip-card__label { font-size: 0.8rem; color: var(--clr-muted); }
+.flip-card__back {
+  transform: rotateY(180deg);
+  background: rgba(255, 255, 255, 0.07);
+}
+.flip-card.is-mine .flip-card__back {
+  background: linear-gradient(145deg, rgba(52, 211, 153, 0.28), rgba(52, 211, 153, 0.08));
+  border-color: rgba(52, 211, 153, 0.7);
+}
+.flip-card__team { font-weight: 700; font-size: 1.05rem; overflow-wrap: anywhere; }
+.flip-card__note { font-size: 0.78rem; color: var(--clr-muted); }
+.flip-card__room { font-size: 1.1rem; font-weight: 800; color: #a7f3d0; }
+.room-banner { margin-bottom: var(--space-4); }
+.room-message { font-size: 1.25rem; font-weight: 700; text-align: center; margin: var(--space-4) 0; }
+@media (min-width: 640px) {
+  .flip-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flip-card__inner { transition: none; }
+}
+.stage-tag {
+  display: inline-block;
+  margin: var(--space-2) 0;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--clr-accent);
+  border: 1px solid rgba(255, 159, 28, 0.5);
+  background: rgba(255, 159, 28, 0.1);
+}

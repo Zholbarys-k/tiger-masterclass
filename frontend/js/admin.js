@@ -459,7 +459,11 @@ function task3ControlsHtml(item) {
           <div class="muted" style="font-size:.82rem">${escapeHtml(item.task_title || t("admin.round.hint"))}</div>
         </div>
         <div class="row">
-          <span class="badge badge--info">${escapeHtml(t(T3_PHASE_LABELS[round.phase] || "admin.round.phase_idle"))}</span>
+          <span class="badge badge--info">${escapeHtml(t(
+            round.likes_enabled === false && round.phase === "closed"
+              ? "admin.round.phase_done"
+              : (T3_PHASE_LABELS[round.phase] || "admin.round.phase_idle"),
+          ))}</span>
           ${round.is_paused ? `<span class="badge badge--accent">⏸ ${escapeHtml(t("admin.quiz.paused"))}</span>` : ""}
           <span class="badge badge--muted">${item.submissions_count || 0} 📨</span>
           <button type="button" class="btn btn--icon btn--ghost qpult-close"
@@ -496,11 +500,11 @@ function task3ControlsHtml(item) {
           <button type="button" class="btn btn--ghost" data-t3-extend="300" data-task="${item.task_id}">+5 ${escapeHtml(t("admin.round.min"))}</button>
           <button type="button" class="btn btn--ghost" data-t3-extend="900" data-task="${item.task_id}">+15 ${escapeHtml(t("admin.round.min"))}</button>
           <button type="button" class="btn btn--ghost" data-t3-extend="-300" data-task="${item.task_id}">−5 ${escapeHtml(t("admin.round.min"))}</button>
-          <button type="button" class="btn btn--success" data-t3="finish" data-task="${item.task_id}">🗳️ ${escapeHtml(t("admin.round.finish"))}</button>` : ""}
+          <button type="button" class="btn btn--success" data-t3="finish" data-task="${item.task_id}">${round.likes_enabled === false ? "🏁" : "🗳️"} ${escapeHtml(t(round.likes_enabled === false ? "admin.round.finish_plain" : "admin.round.finish"))}</button>` : ""}
           ${round.phase === "voting"
             ? `<button type="button" class="btn btn--ghost" data-t3="close" data-task="${item.task_id}">🏁 ${escapeHtml(t("admin.round.close"))}</button>`
             : ""}
-          ${round.phase === "closed"
+          ${round.phase === "closed" && round.likes_enabled !== false
             ? `<button type="button" class="btn btn--success" data-t3="open" data-task="${item.task_id}">🗳️ ${escapeHtml(t("admin.round.reopen"))}</button>`
             : ""}
           ${started ? `<button type="button" class="btn btn--ghost" data-t3="reset" data-task="${item.task_id}">🔄 ${escapeHtml(t("admin.round.reset"))}</button>` : ""}
@@ -557,7 +561,9 @@ const tasksTab = {
         if (action === "start" && phase !== "idle") {
           if (!await confirmDialog(t("admin.round.confirm_restart"))) return;
         }
-        if (action === "finish" && !await confirmDialog(t("admin.round.confirm_finish"))) return;
+        if (action === "finish" && !await confirmDialog(t(
+          item?.round?.likes_enabled === false ? "admin.round.confirm_finish_plain" : "admin.round.confirm_finish",
+        ))) return;
         if (action === "reset" && !await confirmDialog(t("admin.round.confirm_reset"))) return;
         await control(taskId, action, action === "reset" ? { clear_likes: true } : {});
       });
@@ -1410,44 +1416,44 @@ const votesTab = {
   async render() {
     const data = await api.admin.allVotes();
 
-    const sectionRows = data.sections.map((section) => `
-      <article class="card">
-        <div class="spread">
-          <div class="row" style="min-width:0">
-            <span style="font-size:1.5rem">${section.icon || "🔬"}</span>
-            <div>
-              <strong>${escapeHtml(section.name)}</strong>
-              <div class="muted" style="font-size:.78rem">${section.votes} ${escapeHtml(t("vote.votes"))} · ${section.percent}%</div>
+    const cardRows = data.cards.map((card) => `
+      <article class="card card--flat spread">
+        <div class="row" style="min-width:0">
+          <span class="badge badge--accent">${card.number}</span>
+          <div style="min-width:0">
+            <strong>${escapeHtml(t("admin.votes.room"))} №${escapeHtml(card.room)}</strong>
+            <div class="muted" style="font-size:.82rem">
+              ${card.taken
+                ? `${escapeHtml(card.team_name)} · ${escapeHtml(card.picked_by)} · ${formatTime(card.picked_at)}`
+                : escapeHtml(t("vote.cards.free"))}
             </div>
           </div>
-          <button type="button" class="btn btn--sm ${section.is_open ? "btn--ghost" : "btn--success"}"
-            data-toggle-section="${section.id}" data-open="${section.is_open ? "1" : "0"}">
-            ${escapeHtml(section.is_open ? t("admin.votes.close_section") : t("admin.votes.open_section"))}</button>
         </div>
-        <div class="progress" style="margin-top:var(--space-2)">
-          <div class="progress__bar" style="width:${section.percent}%"></div>
-        </div>
+        ${card.taken ? `
+        <button type="button" class="btn btn--sm btn--ghost" data-release-card="${card.number}">
+          ↩️ ${escapeHtml(t("admin.votes.release"))}</button>` : ""}
       </article>`).join("");
-
-    const voteRows = data.votes.map((vote) => `
-      <tr>
-        <td>${escapeHtml(vote.user_login)}</td>
-        <td>${escapeHtml(roleLabel(vote.user_role))}</td>
-        <td>${escapeHtml(vote.team_name)}</td>
-        <td>${escapeHtml(vote.section_name)}</td>
-        <td class="nums">${formatTime(vote.updated_at)}</td>
-      </tr>`).join("");
 
     content.innerHTML = `
       <div class="spread" style="margin-bottom:var(--space-4)">
-        <h3 style="margin:0">${escapeHtml(t("admin.votes.title"))} · ${data.total_votes}</h3>
-        <button type="button" class="btn btn--sm btn--danger" data-reset-votes>
+        <h3 style="margin:0">${escapeHtml(t("admin.votes.cards_title"))} · ${data.taken_count}/${data.cards.length}</h3>
+        <button type="button" class="btn btn--sm btn--danger" data-reset-cards>
           🔄 ${escapeHtml(t("admin.votes.reset"))}</button>
       </div>
 
-      <div class="stack">${sectionRows}</div>
+      <div class="card card--flat spread" style="margin-bottom:var(--space-4)">
+        <div style="min-width:0">
+          <span class="badge ${data.visible ? "badge--success" : "badge--muted"}">
+            ${escapeHtml(t(data.visible ? "admin.votes.visible_badge" : "admin.votes.hidden_badge"))}</span>
+          <div class="muted" style="font-size:.8rem; margin-top:4px">${escapeHtml(t("admin.votes.visibility_hint"))}</div>
+        </div>
+        <button type="button" class="btn btn--sm ${data.visible ? "btn--ghost" : "btn--success"}" data-toggle-visible>
+          ${data.visible ? "🙈" : "👁️"} ${escapeHtml(t(data.visible ? "admin.votes.hide" : "admin.votes.show"))}</button>
+      </div>
 
-      ${(data.galleries || []).map((gallery) => `
+      <div class="stack">${cardRows}</div>
+
+      ${(data.galleries || []).filter((gallery) => gallery.round?.likes_enabled).map((gallery) => `
       <div class="spread" style="margin-top:var(--space-5); margin-bottom:var(--space-3)">
         <h3 style="margin:0">${escapeHtml(t("admin.votes.projects_n", { n: gallery.task_order }))}</h3>
       </div>
@@ -1466,36 +1472,46 @@ const votesTab = {
           </article>`).join("")
           : `<div class="muted">${escapeHtml(t("vote.round.empty"))}</div>`}
       </div>`).join("")}
-      ${data.galleries?.length ? `
+      ${(data.galleries || []).some((gallery) => gallery.round?.likes_enabled) ? `
       <div class="row" style="margin-bottom:var(--space-5)">
         <button type="button" class="btn btn--sm btn--danger" data-reset-likes>
           🔄 ${escapeHtml(t("admin.votes.reset_likes"))}</button>
       </div>` : ""}
 
-      <h3 style="margin-top:var(--space-5)">${escapeHtml(t("admin.votes.list"))}</h3>
-      ${data.votes.length ? `
-      <div class="table-wrap">
-        <table class="table">
-          <thead><tr>
-            <th>${escapeHtml(t("admin.votes.user"))}</th>
-            <th>${escapeHtml(t("team.role"))}</th>
-            <th>${escapeHtml(t("admin.votes.team"))}</th>
-            <th>${escapeHtml(t("admin.votes.section"))}</th>
-            <th>${escapeHtml(t("tasks.submitted_at"))}</th>
-          </tr></thead>
-          <tbody>${voteRows}</tbody>
-        </table>
-      </div>` : emptyState("admin.votes.empty", "🗳️")}`;
+`;
 
-    content.querySelector("[data-reset-votes]").addEventListener("click", async () => {
+    content.querySelector("[data-reset-cards]").addEventListener("click", async () => {
       if (!await confirmDialog(t("admin.votes.confirm_reset"))) return;
       try {
-        await api.admin.resetVotes();
+        await api.admin.resetCards();
         notify.ok(t("admin.votes.reset_done"));
         render();
       } catch (error) {
         notify.err(apiErrorMessage(error));
       }
+    });
+
+    content.querySelector("[data-toggle-visible]").addEventListener("click", async () => {
+      try {
+        await api.admin.setCardsVisible(!data.visible);
+        notify.ok(t("common.saved"));
+        render();
+      } catch (error) {
+        notify.err(apiErrorMessage(error));
+      }
+    });
+
+    content.querySelectorAll("[data-release-card]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        if (!await confirmDialog(t("admin.votes.confirm_release"))) return;
+        try {
+          await api.admin.releaseCard(Number(button.dataset.releaseCard));
+          notify.ok(t("admin.votes.released"));
+          render();
+        } catch (error) {
+          notify.err(apiErrorMessage(error));
+        }
+      });
     });
 
     content.querySelector("[data-reset-likes]")?.addEventListener("click", async () => {
@@ -1507,20 +1523,6 @@ const votesTab = {
       } catch (error) {
         notify.err(apiErrorMessage(error));
       }
-    });
-
-    content.querySelectorAll("[data-toggle-section]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        try {
-          await api.admin.updateSection(Number(button.dataset.toggleSection), {
-            is_open: button.dataset.open === "0",
-          });
-          notify.ok(t("common.saved"));
-          render();
-        } catch (error) {
-          notify.err(apiErrorMessage(error));
-        }
-      });
     });
   },
 };

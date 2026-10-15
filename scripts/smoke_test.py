@@ -122,8 +122,8 @@ def main() -> None:
     status, me = call("GET", "/api/auth/me", leader_token)
     team = me["team"]
     check("у лидера есть команда", team is not None)
-    check("в команде 4 участника + лидер", len(team["members"]) == 4 and team["leader"] is not None)
-    check("название команды на английском", team["name"].isascii())
+    check("в команде 24 участника + лидер", len(team["members"]) == 24 and team["leader"] is not None)
+    check("название команды «1-команда»", team["name"] == "1-команда")
     team_id = team["id"]
 
     print("\n=== 3. Задания и отправка ответов ===")
@@ -181,7 +181,7 @@ def main() -> None:
     check("админ запустил тест", status == 200 and started["quiz"]["phase"] == "question")
 
     status, admin_q = call("GET", "/api/admin/quiz/questions", admin_token)
-    check("в тесте 15 вопросов", len(admin_q["questions"]) == 15)
+    check("в тесте не меньше 17 вопросов", len(admin_q["questions"]) >= 17)
     correct_map = {q["id"]: q["correct_index"] for q in admin_q["questions"]}
 
     status, q_leader = call("GET", "/api/quiz/state", leader_token)
@@ -191,7 +191,7 @@ def main() -> None:
           q_leader["question"]["id"] == q_member["question"]["id"])
     check("участник видит варианты ответов", len(q_member["question"]["options"]) == 4)
     check("лидер может отвечать", q_leader["can_answer"] is True)
-    check("участник не может отвечать", q_member["can_answer"] is False)
+    check("участник тоже может отвечать", q_member["can_answer"] is True)
     check("правильный ответ скрыт до конца таймера", "correct_index" not in q_leader["question"])
     check("таймер идёт", 0 < (q_leader["quiz"]["remaining_seconds"] or 0) <= 5,
           str(q_leader["quiz"]["remaining_seconds"]))
@@ -208,7 +208,9 @@ def main() -> None:
 
     status, denied = call("POST", "/api/quiz/answer", member_token,
                           payload={"question_id": first_id, "selected_index": 0})
-    check("участник НЕ может отвечать на тест (403)", status == 403)
+    check("участник ответил на тест (неверно)", status == 200)
+    status, q_member_after = call("GET", "/api/quiz/state", member_token)
+    check("ответ участника не мешает ответу лидера", q_member_after["question"]["answered"] is True)
 
     status, waiting = call("GET", "/api/quiz/state", leader_token)
     check("ответивший ждёт остальных", waiting["can_answer"] is False
@@ -232,7 +234,7 @@ def main() -> None:
     check("между вопросами показано место команды",
           q_leader["standings"]["my"]["rank"] == 1, str(q_leader["standings"])[:120])
     check("видно, сколько команд ответило",
-          q_leader["question_stats"]["answered_teams"] == 1)
+          q_leader["question_stats"]["answered_users"] == 2)
 
     status, late = call("POST", "/api/quiz/answer", leader_token,
                         payload={"question_id": first_id, "selected_index": 0})
@@ -270,30 +272,56 @@ def main() -> None:
     check("после завершения виден итоговый рейтинг", final_state["standings"] is not None)
     check("прогресс команды сохранён", final_state["my_progress"]["answered"] == 1)
 
-    print("\n=== 5. Голосование за секции ===")
-    status, sections = call("GET", "/api/sections", member_token)
-    check("секции загружаются", status == 200 and len(sections["sections"]) >= 6)
-    check("участник может голосовать", sections["can_vote"] is True)
-    section_id = sections["sections"][0]["id"]
+    print("\n=== 5. Карточки кабинетов ===")
+    call("POST", "/api/cards/reset", admin_token)
+    status, cards = call("GET", "/api/cards", member_token)
+    check("6 карточек загружаются", status == 200 and len(cards["cards"]) == 6)
+    check("участник не может выбирать карточку", cards["can_pick"] is False)
+    check("лидер может выбирать карточку", call("GET", "/api/cards", leader_token)[1]["can_pick"] is True)
 
-    status, voted = call("POST", "/api/votes", member_token, payload={"section_id": section_id})
-    check("участник проголосовал", status == 200)
-    status, voted_leader = call("POST", "/api/votes", leader_token, payload={"section_id": section_id})
-    check("лидер проголосовал", status == 200)
+    status, denied = call("POST", "/api/cards/pick", member_token, payload={"number": 1})
+    check("участник не выбирает карточку (403)", status == 403)
+    status, denied = call("POST", "/api/cards/pick", admin_token, payload={"number": 1})
+    check("админ не выбирает карточку (403)", status == 403)
 
-    status, revote = call("POST", "/api/votes", member_token,
-                          payload={"section_id": sections["sections"][1]["id"]})
-    check("голос можно изменить", status == 200)
-    total = sum(s["votes"] for s in revote["sections"])
-    check("один голос на пользователя (всего 2)", total == 2, f"total={total}")
+    status, picked = call("POST", "/api/cards/pick", leader_token, payload={"number": 1})
+    check("лидер выбрал карточку 1", status == 200 and picked["my_room"] == "107", str(picked)[:120])
+    status, again = call("POST", "/api/cards/pick", leader_token, payload={"number": 2})
+    check("вторая карточка команде недоступна", status == 409 and again.get("error") == "team_already_picked")
 
-    status, denied = call("POST", "/api/votes", admin_token, payload={"section_id": section_id})
-    check("админ не голосует (403)", status == 403)
+    status, seen = call("GET", "/api/cards", member_token)
+    first = seen["cards"][0]
+    check("участник видит, какая команда выбрала карточку",
+          first["taken"] is True and first["team_name"] == "1-команда")
+    check("участник своей команды видит кабинет", first["room"] == "107" and seen["my_room"] == "107")
+
+    status, other_leader = call("POST", "/api/auth/login", payload={"login": "t02-leader", "password": PARTICIPANT_PWD})
+    other_token = other_leader["token"]
+    status, taken = call("POST", "/api/cards/pick", other_token, payload={"number": 1})
+    check("занятую карточку выбрать нельзя", status == 409 and taken.get("error") == "card_taken")
+    status, other_view = call("GET", "/api/cards", other_token)
+    check("чужой кабинет не раскрывается", other_view["cards"][0]["room"] == "")
 
     status, all_votes = call("GET", "/api/votes/all", admin_token)
-    check("админ видит все голоса", status == 200 and len(all_votes["votes"]) == 2)
+    check("админ видит кабинеты выбравших", status == 200
+          and any(c["room"] == "107" and c["taken"] for c in all_votes["cards"]))
     status, denied = call("GET", "/api/votes/all", leader_token)
-    check("лидер НЕ видит список всех голосов", status == 403)
+    check("лидер НЕ видит админскую сводку (403)", status == 403)
+    status, denied = call("POST", "/api/cards/1/release", leader_token)
+    check("лидер не освобождает карточки (403)", status == 403)
+    status, hidden = call("POST", "/api/cards/visibility", admin_token, payload={"visible": False})
+    check("админ скрыл карточки", status == 200 and hidden["visible"] is False)
+    status, hidden_view = call("GET", "/api/cards", leader_token)
+    check("лидер не видит скрытые карточки", hidden_view["cards"] == [] and hidden_view["visible"] is False)
+    status, blocked = call("POST", "/api/cards/pick", other_token, payload={"number": 3})
+    check("при скрытии выбор карточки закрыт (403)", status == 403 and blocked.get("error") == "cards_hidden")
+    status, admin_view = call("GET", "/api/cards", admin_token)
+    check("админ видит скрытые карточки", len(admin_view["cards"]) == 6)
+    status, shown = call("POST", "/api/cards/visibility", leader_token, payload={"visible": True})
+    check("лидер не управляет видимостью (403)", status == 403)
+    call("POST", "/api/cards/visibility", admin_token, payload={"visible": True})
+    status, released = call("POST", "/api/cards/reset", admin_token)
+    check("админ освободил все карточки", status == 200 and released["taken_count"] == 0)
 
     print("\n=== 6. Рейтинг ===")
     status, board = call("GET", "/api/leaderboard", leader_token)
@@ -304,15 +332,15 @@ def main() -> None:
     check("моя команда в рейтинге", board["my_team"] is not None)
 
     status, admin_board = call("GET", "/api/leaderboard", admin_token)
-    check("админ видит все 40 команд", admin_board["total_ranked"] == 40,
+    check("админ видит все 8 команд", admin_board["total_ranked"] == 8,
           f"ranked={admin_board['total_ranked']}")
 
     print("\n=== 7. Панель администратора ===")
     status, overview = call("GET", "/api/admin/overview", admin_token)
-    check("сводка: 40 команд, 210 аккаунтов",
-          overview["stats"]["teams"] == 40 and overview["stats"]["users"] == 210)
-    check("сводка: 40 лидеров, 160 участников, 10 админов",
-          overview["stats"]["leaders"] == 40 and overview["stats"]["members"] == 160
+    check("сводка: 8 команд, 210 аккаунтов",
+          overview["stats"]["teams"] == 8 and overview["stats"]["users"] == 210)
+    check("сводка: 8 лидеров, 192 участника, 10 админов",
+          overview["stats"]["leaders"] == 8 and overview["stats"]["members"] == 192
           and overview["stats"]["admins"] == 10)
 
     status, denied = call("GET", "/api/admin/overview", leader_token)

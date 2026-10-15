@@ -69,7 +69,7 @@ TIGER/
 │   ├── export_credentials.py  # перегенерировать файлы с логинами из БД
 │   └── smoke_test.py          # сквозная проверка API (98 проверок, чистая БД)
 ├── credentials/               # ЛОГИНЫ/ПАРОЛИ (в .gitignore)
-│   ├── credentials.txt        # полный список: 200 участников + 10 админов
+│   ├── credentials.txt        # полный список: 8 команд × 25 = 200 участников + 10 админов
 │   ├── credentials.csv        # та же таблица для Excel
 │   └── team_cards.txt         # карточки команд на печать
 ├── data/                      # SQLite (в .gitignore)
@@ -81,7 +81,7 @@ TIGER/
 `Team` → `User` (role: admin|leader|member) → `AuthToken`
 `Task` → `Submission` → `Attachment`
 `Section` ← `Vote`
-`Quiz` (фаза, текущий вопрос, таймеры) → `Question` ← `QuizAnswer` (только от лидера, одна на команду)
+`Quiz` (фаза, текущий вопрос, таймеры) → `Question` ← `QuizAnswer` (от каждого участника, один на вопрос; баллы суммируются команде)
 `ScoreAdjustment` — ручные правки баллов админом.
 
 **Тест синхронный**: у всех одновременно виден один текущий вопрос (`Quiz.phase`,
@@ -97,7 +97,7 @@ TIGER/
 |----------|:-----:|:------:|:------:|
 | Просмотр заданий / секций / рейтинга | ✔ | ✔ | ✔ |
 | Отправка ответа на задание + файлы | ✔ | ✔ | ✘ |
-| Ответы на вопросы теста | ✘* | ✔ | ✘ (только просмотр) |
+| Ответы на вопросы теста | ✘* | ✔ | ✔ |
 | Голосование за секцию | ✘ | ✔ | ✔ |
 | Изменение состава команд, лидеров | ✔ | ✘ | ✘ |
 | Ручная правка баллов | ✔ | ✘ | ✘ |
@@ -112,6 +112,7 @@ TIGER/
 pip install -r requirements.txt      # зависимости
 python scripts/init_db.py            # создать БД, команды, 210 аккаунтов, credentials.txt
 python run.py                        # запустить сервер (http://localhost:5000)
+python scripts/rebuild_teams.py     # пересоздать команды (TEAMS_COUNT × TEAM_SIZE)
 python scripts/smoke_test.py         # проверить API при запущенном сервере
 python scripts/reset_db.py           # полный сброс данных
 ```

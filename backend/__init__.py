@@ -48,6 +48,7 @@ def create_app(config_object: type = app_config.Config) -> Flask:
         db.create_all()
         _ensure_schema(app)
         _ensure_task_rounds(app)
+        _ensure_room_cards(app)
         if app.config.get("AUTO_SEED", True):
             _seed_if_empty(app)
 
@@ -145,6 +146,17 @@ def _ensure_task_rounds(app: Flask) -> None:
         app.logger.error("Не удалось создать пульты заданий: %s", error)
 
 
+def _ensure_room_cards(app: Flask) -> None:
+    """Карточки кабинетов нужны и в уже существующей базе."""
+    try:
+        from .seed import seed_room_cards
+
+        seed_room_cards()
+    except Exception as error:  # pragma: no cover
+        db.session.rollback()
+        app.logger.error("Не удалось создать карточки кабинетов: %s", error)
+
+
 def _seed_if_empty(app: Flask) -> None:
     """При первом запуске (в т.ч. на хостинге) создать команды и аккаунты."""
     from .models import User
@@ -154,7 +166,7 @@ def _seed_if_empty(app: Flask) -> None:
         return
     try:
         seed_all(write_credentials=True)
-        app.logger.info("База наполнена: команды, аккаунты, задания, тест, секции.")
+        app.logger.info("База наполнена: команды, аккаунты, задания, тест, карточки кабинетов.")
     except Exception as error:  # pragma: no cover
         db.session.rollback()
         app.logger.error("Не удалось наполнить базу: %s", error)

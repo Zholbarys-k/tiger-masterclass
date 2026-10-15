@@ -11,9 +11,11 @@ from ..models import (
     PHASE_STANDINGS,
     ROLE_ADMIN,
     ROLE_LEADER,
+    ROLE_MEMBER,
     Question,
     QuizAnswer,
     Team,
+    User,
     bump,
     utcnow,
 )
@@ -24,23 +26,27 @@ from .leaderboard_routes import build_leaderboard
 bp = Blueprint("quiz", __name__, url_prefix="/api/quiz")
 
 TOP_SIZE = 10
+# В тесте отвечает каждый участник команды; баллы всех ответов суммируются команде.
+PLAYER_ROLES = (ROLE_LEADER, ROLE_MEMBER)
 
 
-def team_answers(team_id: int | None) -> dict[int, QuizAnswer]:
-    if not team_id:
-        return {}
-    rows = db.session.query(QuizAnswer).filter_by(team_id=team_id).all()
+def user_answers(user_id: int) -> dict[int, QuizAnswer]:
+    """Собственные ответы пользователя по вопросам."""
+    rows = db.session.query(QuizAnswer).filter_by(user_id=user_id).all()
     return {row.question_id: row for row in rows}
 
 
 def question_stats(question: Question | None) -> dict | None:
     if question is None:
         return None
-    total_teams = db.session.query(Team).filter_by(is_active=True).count()
+    total_users = (db.session.query(User)
+                   .join(Team, User.team_id == Team.id)
+                   .filter(Team.is_active.is_(True), User.role.in_(PLAYER_ROLES))
+                   .count())
     return {
-        "answered_teams": len(question.answers),
-        "correct_teams": sum(1 for a in question.answers if a.is_correct),
-        "total_teams": total_teams,
+        "answered_users": len(question.answers),
+        "correct_users": sum(1 for a in question.answers if a.is_correct),
+        "total_users": total_users,
     }
 
 
@@ -67,9 +73,9 @@ def quiz_state():
 
     ensure_progress(quiz)
 
-    is_leader = g.user.role == ROLE_LEADER
+    is_player = g.user.role in PLAYER_ROLES and bool(g.user.team_id)
     is_admin = g.user.role == ROLE_ADMIN
-    answers = team_answers(g.user.team_id)
+    answers = user_answers(g.user.id)
 
     question = quiz.current_question if quiz.phase in (PHASE_QUESTION, PHASE_STANDINGS) else None
     show_correct = quiz.phase in (PHASE_STANDINGS, PHASE_FINISHED) or is_admin
@@ -90,7 +96,7 @@ def quiz_state():
 
     remaining = quiz.remaining_seconds
     can_answer = bool(
-        is_leader
+        is_player
         and quiz.is_open
         and quiz.phase == PHASE_QUESTION
         and not quiz.is_paused
@@ -105,12 +111,16 @@ def quiz_state():
     # Пока идёт вопрос, результат текущего ответа не показываем: сначала таймер.
     pending = answers.get(question.id) if (quiz.phase == PHASE_QUESTION and question) else None
     hidden_points = pending.points if pending else 0
+    # Баллы команды за текущий вопрос тоже скрыты до конца таймера.
+    team_hidden = 0
+    if team and question and quiz.phase == PHASE_QUESTION:
+        team_hidden = sum(a.points for a in question.answers if a.team_id == team.id)
 
     return json_ok(
         quiz=quiz.to_dict(lang),
         question=question_payload,
         can_answer=can_answer,
-        read_only=not is_leader,
+        read_only=not is_player,
         my_progress={
             "answered": len(answers),
             "total": len(quiz.questions),
@@ -120,7 +130,7 @@ def quiz_state():
         team={
             "id": team.id,
             "name": team.name,
-            "total_points": team.total_points - hidden_points,
+            "total_points": team.total_points - team_hidden,
         } if team else None,
         standings=standings_payload(g.user.team_id) if (show_standings or is_admin) else None,
         question_stats=question_stats(question) if (show_standings or is_admin) else None,
@@ -129,9 +139,9 @@ def quiz_state():
 
 
 @bp.post("/answer")
-@require_role(ROLE_LEADER)
+@require_role(ROLE_LEADER, ROLE_MEMBER)
 def answer():
-    """Ответ лидера на текущий вопрос. Результат раскрывается после таймера."""
+    """Ответ участника на текущий вопрос. Баллы идут его команде, результат — после таймера."""
     quiz = get_quiz()
     if quiz is None or not quiz.is_open:
         return json_err("quiz_closed", "Тест закрыт", 400)
@@ -162,9 +172,9 @@ def answer():
         return json_err("bad_option", "Некорректный вариант ответа", 400)
 
     existing = (db.session.query(QuizAnswer)
-                .filter_by(question_id=current.id, team_id=g.user.team_id).one_or_none())
+                .filter_by(question_id=current.id, user_id=g.user.id).one_or_none())
     if existing is not None:
-        return json_err("already_answered", "Команда уже ответила на этот вопрос", 400)
+        return json_err("already_answered", "Вы уже ответили на этот вопрос", 400)
 
     is_correct = selected_index == current.correct_index
     record = QuizAnswer(

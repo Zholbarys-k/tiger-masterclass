@@ -197,11 +197,11 @@ function myResultHtml(data) {
 function statsLineHtml(data) {
   const stats = data.question_stats;
   if (!stats) return "";
-  const line = t("quiz.answered_teams", {
-    answered: stats.answered_teams,
-    total: stats.total_teams,
+  const line = t("quiz.answered_users", {
+    answered: stats.answered_users,
+    total: stats.total_users,
   });
-  return `<div class="muted center" style="font-size:.82rem">${escapeHtml(line)} · ✅ ${stats.correct_teams}</div>`;
+  return `<div class="muted center" style="font-size:.82rem">${escapeHtml(line)} · ✅ ${stats.correct_users}</div>`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -231,7 +231,7 @@ function questionPhaseHtml(data) {
   if (data.can_answer) {
     hint = `<div class="muted center" style="font-size:.82rem">✍️ ${escapeHtml(t("quiz.leader_hint"))}</div>`;
   } else if (data.read_only) {
-    hint = `<div class="muted center" style="font-size:.82rem">👀 ${escapeHtml(t("quiz.member_view_hint"))}</div>`;
+    hint = `<div class="muted center" style="font-size:.82rem">👀 ${escapeHtml(t("quiz.view_only_hint"))}</div>`;
   } else if (!answered) {
     hint = `<div class="muted center" style="font-size:.82rem">⌛ ${escapeHtml(t("quiz.time_over"))}</div>`;
   }

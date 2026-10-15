@@ -1,40 +1,69 @@
-/* Голосование за секции и лайки проектов задания №3. */
+/* Выбор карточек кабинетов и лайки проектов заданий. */
 
 import { api, fileUrl } from "../api.js";
 import { t } from "../i18n.js";
 import { store } from "../store.js";
-import { apiErrorMessage, escapeHtml, loaderBlock, notify } from "../ui.js";
+import { apiErrorMessage, confirmDialog, escapeHtml, loaderBlock, notify, openModal } from "../ui.js";
 
-function sectionCardHtml(section, myVoteId, canVote) {
-  const chosen = section.id === myVoteId;
+/** Сообщение об ошибке выбора карточки на языке интерфейса. */
+function vote_error(error) {
+  const key = `vote.cards.err_${error?.code}`;
+  const text = t(key);
+  return text === key ? apiErrorMessage(error) : text;
+}
+
+function roomCardHtml(card, data) {
+  const canPick = data.can_pick && !card.taken;
+  const back = card.taken
+    ? `<span class="flip-card__team">${escapeHtml(card.team_name)}</span>
+       ${card.is_mine
+         ? `<span class="flip-card__room">${escapeHtml(t("vote.cards.room", { room: card.room }))}</span>`
+         : `<span class="flip-card__note">${escapeHtml(t("vote.cards.chosen"))}</span>`}`
+    : "";
   return `
-    <article class="vote-card ${chosen ? "is-chosen" : ""}">
-      <div class="vote-card__top">
-        <div class="vote-card__icon">${section.icon || "🔬"}</div>
-        <div class="grow">
-          <div class="vote-card__name">${escapeHtml(section.name)}</div>
-          <div class="vote-card__desc">${escapeHtml(section.description)}</div>
-        </div>
-        ${chosen ? `<span class="badge badge--accent">✓ ${escapeHtml(t("vote.voted"))}</span>` : ""}
-      </div>
+    <button type="button" class="flip-card ${card.taken ? "is-flipped" : ""} ${card.is_mine ? "is-mine" : ""}"
+      data-card="${card.number}" ${canPick ? "" : "disabled"}
+      aria-label="${escapeHtml(t("vote.cards.card", { n: card.number }))}">
+      <span class="flip-card__inner">
+        <span class="flip-card__face flip-card__front">
+          <span class="flip-card__num">${card.number}</span>
+          <span class="flip-card__label">${escapeHtml(canPick ? t("vote.cards.pick") : t("vote.cards.free"))}</span>
+        </span>
+        <span class="flip-card__face flip-card__back" data-card-back>${back}</span>
+      </span>
+    </button>`;
+}
 
-      <div class="vote-card__meter">
-        <div class="progress"><div class="progress__bar" style="width:${section.percent}%"></div></div>
-        <div class="vote-card__numbers">
-          <span>${section.votes} ${escapeHtml(t("vote.votes"))}</span>
-          <span>${section.percent}%</span>
-        </div>
-      </div>
+function cardsHintKey(data) {
+  if (!data.is_leader) return store.user?.role === "admin" ? "vote.cards.admin_hint" : "vote.cards.member_hint";
+  if (data.my_card) return "vote.cards.done_hint";
+  if (!data.can_pick) return "vote.cards.all_taken";
+  return "vote.cards.leader_hint";
+}
 
-      ${canVote
-        ? `<button type="button" class="btn ${chosen ? "btn--ghost" : "btn--primary"} btn--block"
-             data-vote="${section.id}" ${section.is_open ? "" : "disabled"}>
-             ${section.is_open
-               ? escapeHtml(chosen ? t("vote.change") : t("vote.button"))
-               : escapeHtml(t("vote.closed"))}
-           </button>`
-        : ""}
-    </article>`;
+function cardsBlockHtml(data) {
+  const banner = data.my_card
+    ? `<div class="card card--accent center stack room-banner">
+         <div style="font-size:2rem">🎉</div>
+         <strong>${escapeHtml(t("vote.cards.result", { room: data.my_room }))}</strong>
+       </div>`
+    : "";
+  return `
+    <div class="page__head">
+      <h1 class="page__title">🗂️ <span>${escapeHtml(t("vote.title"))}</span></h1>
+      <div class="stage-tag">${escapeHtml(t("vote.cards.stage"))}</div>
+      <p class="page__hint">${escapeHtml(t(cardsHintKey(data)))}</p>
+    </div>
+    ${data.visible === false ? `<div class="qnotice qnotice--warn" style="margin-bottom:var(--space-4)">👁️‍🗨️ ${escapeHtml(t("vote.cards.hidden_admin"))}</div>` : ""}
+    ${banner}
+    <div class="card card--flat spread" style="margin-bottom:var(--space-4)">
+      <span class="row"><span class="live-dot"></span> <strong>${escapeHtml(t("common.live"))}</strong></span>
+      <span class="badge badge--info">${escapeHtml(t("vote.cards.progress", {
+        taken: data.taken_count,
+        total: data.cards.length,
+      }))}</span>
+    </div>
+    <div class="flip-grid">${data.cards.map((card) => roomCardHtml(card, data)).join("")}</div>`;
 }
 
 function projectMedia(project) {
@@ -122,42 +151,45 @@ export default {
     let data;
     let projectsData;
     try {
-      [data, projectsData] = await Promise.all([api.sections(), api.projects()]);
+      [data, projectsData] = await Promise.all([api.cards(), api.projects()]);
     } catch (error) {
       root.innerHTML = `<div class="empty">${escapeHtml(apiErrorMessage(error))}</div>`;
       return;
     }
 
-    const galleries = projectsData.galleries || [];
+    // Лайки только у раундов, где они включены (задания №3 и выше).
+    const galleries = (projectsData.galleries || []).filter((gallery) => gallery.round?.likes_enabled);
     root.dataset.ready = "1";
-    root.innerHTML = `
-      <div class="page__head">
-        <h1 class="page__title">🗳️ <span>${escapeHtml(t("vote.title"))}</span></h1>
-        <p class="page__hint">${escapeHtml(data.can_vote ? t("vote.hint") : t("vote.admin_cannot"))}</p>
-      </div>
+    const projectsHtml = galleries.map(projectsBlockHtml).join("");
+    // Администратор скрыл карточки: участники видят только остальное содержимое страницы.
+    const cardsHidden = data.visible === false && store.user?.role !== "admin";
+    root.innerHTML = cardsHidden
+      ? (projectsHtml || `<div class="empty">🗂️ ${escapeHtml(t("vote.cards.hidden"))}</div>`)
+      : `${cardsBlockHtml(data)}${projectsHtml}`;
 
-      <div class="card card--flat spread" style="margin-bottom:var(--space-4)">
-        <span class="row"><span class="live-dot"></span> <strong>${escapeHtml(t("common.live"))}</strong></span>
-        <span class="badge badge--info">${escapeHtml(t("vote.total"))}: ${data.total_votes}</span>
-      </div>
-
-      <div class="grid grid--auto">
-        ${data.sections.map((section) => sectionCardHtml(section, data.my_vote_section_id, data.can_vote)).join("")}
-      </div>
-
-      ${galleries.map(projectsBlockHtml).join("")}`;
-
-    root.querySelectorAll("[data-vote]").forEach((button) => {
+    root.querySelectorAll("[data-card]").forEach((button) => {
       button.addEventListener("click", async () => {
-        const sectionId = Number(button.dataset.vote);
-        root.querySelectorAll("[data-vote]").forEach((other) => { other.disabled = true; });
+        const number = Number(button.dataset.card);
+        if (!await confirmDialog(t("vote.cards.confirm", { n: number }))) return;
+        root.querySelectorAll("[data-card]").forEach((other) => { other.disabled = true; });
         try {
-          await api.vote(sectionId);
-          notify.ok(t("vote.saved"));
+          const result = await api.pickCard(number);
+          const mine = result.cards.find((card) => card.number === number);
+          button.querySelector("[data-card-back]").innerHTML = `
+            <span class="flip-card__team">${escapeHtml(mine.team_name)}</span>
+            <span class="flip-card__room">${escapeHtml(t("vote.cards.room", { room: mine.room }))}</span>`;
+          button.classList.add("is-flipped", "is-mine");
+          setTimeout(() => {
+            openModal({
+              title: t("vote.cards.result_title"),
+              bodyHtml: `<p class="room-message">${escapeHtml(t("vote.cards.result", { room: result.my_room }))}</p>`,
+            });
+            this.render(root);
+          }, 900);
         } catch (error) {
-          notify.err(apiErrorMessage(error));
+          notify.err(vote_error(error));
+          await this.render(root);
         }
-        await this.render(root);
       });
     });
 

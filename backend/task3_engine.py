@@ -81,7 +81,10 @@ def ensure_rounds() -> list[TaskRound]:
                 row.task_order = task.order
                 created = True
     if created:
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception:  # параллельный запрос уже создал пульт
+            db.session.rollback()
     return (
         db.session.query(TaskRound)
         .filter(TaskRound.task_id.isnot(None))
@@ -116,7 +119,7 @@ def ensure_progress(round_: TaskRound | None = None) -> bool:
             update(TaskRound)
             .where(TaskRound.id == row.id, TaskRound.phase == PHASE_T3_RUNNING)
             .values(
-                phase=PHASE_T3_VOTING,
+                phase=row.after_work_phase,
                 phase_started_at=utcnow(),
                 phase_ends_at=None,
                 is_paused=False,
@@ -156,7 +159,7 @@ def start(row: TaskRound) -> None:
 
 def finish(row: TaskRound) -> None:
     apply_values(row, {
-        "phase": PHASE_T3_VOTING,
+        "phase": row.after_work_phase,
         "phase_started_at": utcnow(),
         "phase_ends_at": None,
         "is_paused": False,
@@ -174,6 +177,8 @@ def close_voting(row: TaskRound) -> None:
 
 
 def open_voting(row: TaskRound) -> None:
+    if not row.likes_enabled:
+        return
     apply_values(row, {
         "phase": PHASE_T3_VOTING,
         "phase_started_at": row.phase_started_at or utcnow(),

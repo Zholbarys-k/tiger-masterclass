@@ -15,14 +15,13 @@ from .models import (
     Question,
     Quiz,
     STATE_KEYS,
-    Section,
+    RoomCard,
     StateVersion,
     Task,
     Team,
     User,
     bump,
 )
-from .team_names import generate_team_names
 
 
 def leader_login(team_no: int) -> str:
@@ -31,6 +30,10 @@ def leader_login(team_no: int) -> str:
 
 def member_login(team_no: int, index: int) -> str:
     return f"t{team_no:02d}-p{index}"
+
+
+def team_name(team_no: int) -> str:
+    return f"{team_no}-команда"
 
 
 def admin_login(index: int) -> str:
@@ -44,12 +47,11 @@ def seed_teams_and_users() -> None:
     cfg = current_app.config
     teams_count = cfg["TEAMS_COUNT"]
     team_size = cfg["TEAM_SIZE"]
-    names = generate_team_names(teams_count)
 
     for number in range(1, teams_count + 1):
         team = db.session.query(Team).filter_by(number=number).one_or_none()
         if team is None:
-            team = Team(number=number, name=names[number - 1])
+            team = Team(number=number, name=team_name(number))
             db.session.add(team)
             db.session.flush()
 
@@ -94,20 +96,8 @@ def _load_json(name: str) -> dict:
         return json.load(fh)
 
 
-def seed_sections_and_tasks() -> None:
+def seed_tasks() -> None:
     data = _load_json("sections.json")
-
-    for order, item in enumerate(data.get("sections", []), start=1):
-        if db.session.query(Section).filter_by(code=item["code"]).one_or_none():
-            continue
-        db.session.add(Section(
-            code=item["code"],
-            icon=item.get("icon", "🔬"),
-            order=order,
-            name_kk=item["name_kk"], name_ru=item["name_ru"], name_en=item["name_en"],
-            desc_kk=item.get("desc_kk", ""), desc_ru=item.get("desc_ru", ""),
-            desc_en=item.get("desc_en", ""),
-        ))
 
     if db.session.query(Task).count() == 0:
         for item in data.get("starter_tasks", []):
@@ -119,6 +109,14 @@ def seed_sections_and_tasks() -> None:
                 is_published=True,
             ))
 
+    db.session.commit()
+
+
+def seed_room_cards() -> None:
+    """Карточки кабинетов: номер карточки → кабинет из config.ROOM_CARDS."""
+    for number, room in enumerate(current_app.config["ROOM_CARDS"], start=1):
+        if db.session.query(RoomCard).filter_by(number=number).one_or_none() is None:
+            db.session.add(RoomCard(number=number, room=str(room)))
     db.session.commit()
 
 
@@ -231,7 +229,8 @@ def write_credentials_file() -> Path:
 
 def seed_all(write_credentials: bool = True) -> Path | None:
     seed_teams_and_users()
-    seed_sections_and_tasks()
+    seed_tasks()
+    seed_room_cards()
     seed_quiz()
     seed_task_round()
     seed_state_versions()

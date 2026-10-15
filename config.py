@@ -32,9 +32,12 @@ class Config:
     ADMIN_PASSWORD = os.environ.get("TIGER_ADMIN_PASSWORD", "TIGERADMIN2026")
 
     # --- Состав мероприятия ---
-    TEAMS_COUNT = 40           # 40 команд × 5 человек = 200 участников
-    TEAM_SIZE = 5              # 1 лидер + 4 участника
+    TEAMS_COUNT = 8            # 8 команд × 25 человек = 200 участников
+    TEAM_SIZE = 25             # 1 лидер + 24 участника
     ADMINS_COUNT = 10
+
+    # --- Карточки кабинетов: карточка №1 → кабинет 107 и так далее ---
+    ROOM_CARDS = ("107", "108", "109", "110", "112", "113")
 
     # --- Токены ---
     TOKEN_TTL_HOURS = 24

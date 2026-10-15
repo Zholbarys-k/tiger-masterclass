@@ -107,7 +107,7 @@ function task3BannerHtml(round) {
   if (round.phase === "voting" || round.phase === "closed") {
     return `
       <div class="qnotice qnotice--ok" style="margin-bottom:var(--space-4)">
-        ${escapeHtml(t("tasks.round.ended", { n: number }))}
+        ${escapeHtml(t(round.likes_enabled === false ? "tasks.round.ended_plain" : "tasks.round.ended", { n: number }))}
       </div>`;
   }
   return `

@@ -1,93 +1,11 @@
 {
-  "sections": [
-    {
-      "code": "robotics_ai",
-      "icon": "🤖",
-      "name_kk": "Робототехника және жасанды интеллект",
-      "name_ru": "Робототехника и искусственный интеллект",
-      "name_en": "Robotics & Artificial Intelligence",
-      "desc_kk": "Роботтарды құрастыру, сенсорлар, ЖИ негіздері және автоматтандыру.",
-      "desc_ru": "Сборка роботов, датчики, основы ИИ и автоматизация.",
-      "desc_en": "Building robots, sensors, AI basics and automation."
-    },
-    {
-      "code": "physics_space",
-      "icon": "🚀",
-      "name_kk": "Физика және ғарыш",
-      "name_ru": "Физика и космос",
-      "name_en": "Physics & Space",
-      "desc_kk": "Тәжірибелер, зымыран моделі, астрономия және аспан денелері.",
-      "desc_ru": "Опыты, модель ракеты, астрономия и небесные тела.",
-      "desc_en": "Experiments, rocket models, astronomy and celestial bodies."
-    },
-    {
-      "code": "programming",
-      "icon": "💻",
-      "name_kk": "Программалау және веб",
-      "name_ru": "Программирование и веб",
-      "name_en": "Programming & Web",
-      "desc_kk": "Python, алгоритмдер, өз сайтын жасау.",
-      "desc_ru": "Python, алгоритмы, создание своего сайта.",
-      "desc_en": "Python, algorithms, building your own website."
-    },
-    {
-      "code": "biology_eco",
-      "icon": "🧬",
-      "name_kk": "Биология және экология",
-      "name_ru": "Биология и экология",
-      "name_en": "Biology & Ecology",
-      "desc_kk": "Микроскоп, ДНҚ модельдері, табиғатты қорғау жобалары.",
-      "desc_ru": "Микроскоп, модели ДНК, проекты защиты природы.",
-      "desc_en": "Microscopes, DNA models, nature protection projects."
-    },
-    {
-      "code": "chemistry",
-      "icon": "⚗️",
-      "name_kk": "Химия зертханасы",
-      "name_ru": "Химическая лаборатория",
-      "name_en": "Chemistry Lab",
-      "desc_kk": "Қауіпсіз тәжірибелер, реакциялар, кристалдар өсіру.",
-      "desc_ru": "Безопасные опыты, реакции, выращивание кристаллов.",
-      "desc_en": "Safe experiments, reactions, growing crystals."
-    },
-    {
-      "code": "math_logic",
-      "icon": "📐",
-      "name_kk": "Математика және логика",
-      "name_ru": "Математика и логика",
-      "name_en": "Mathematics & Logic",
-      "desc_kk": "Олимпиада есептері, басқатырғыштар, логикалық ойындар.",
-      "desc_ru": "Олимпиадные задачи, головоломки, логические игры.",
-      "desc_en": "Olympiad problems, puzzles and logic games."
-    },
-    {
-      "code": "media_design",
-      "icon": "🎨",
-      "name_kk": "Медиа және дизайн",
-      "name_ru": "Медиа и дизайн",
-      "name_en": "Media & Design",
-      "desc_kk": "Фото, видео түсіру, монтаж және графикалық дизайн.",
-      "desc_ru": "Фото, видеосъёмка, монтаж и графический дизайн.",
-      "desc_en": "Photography, video shooting, editing and graphic design."
-    },
-    {
-      "code": "engineering",
-      "icon": "🛠️",
-      "name_kk": "Инженерия және 3D",
-      "name_ru": "Инженерия и 3D",
-      "name_en": "Engineering & 3D",
-      "desc_kk": "3D модельдеу, көпір мен конструкция жобалары.",
-      "desc_ru": "3D-моделирование, проекты мостов и конструкций.",
-      "desc_en": "3D modelling, bridge and structure projects."
-    }
-  ],
   "starter_tasks": [
     {
       "order": 1,
       "max_points": 10,
-      "title_kk": "1-тапсырма: Команданы таныстыру",
-      "title_ru": "Задание 1: Представление команды",
-      "title_en": "Task 1: Introduce your team",
+      "title_kk": "ZERO-тапсырма: Команданы таныстыру",
+      "title_ru": "Задание ZERO: Представление команды",
+      "title_en": "Task ZERO: Introduce your team",
       "body_kk": "Команда атауын, ұранын жазыңдар және бірге түскен суреттеріңді жүктеңдер (15 МБ дейін).",
       "body_ru": "Напишите название команды, ваш девиз и загрузите общее фото команды (до 15 МБ).",
       "body_en": "Write your team name, your motto and upload a group photo of the team (up to 15 MB)."
@@ -95,9 +13,9 @@
     {
       "order": 2,
       "max_points": 15,
-      "title_kk": "2-тапсырма: Ғылыми идея",
-      "title_ru": "Задание 2: Научная идея",
-      "title_en": "Task 2: Scientific idea",
+      "title_kk": "1-кезең: «Science»",
+      "title_ru": "Раунд 1: «Science»",
+      "title_en": "Round 1: «Science»",
       "body_kk": "Мектепті жақсартатын бір ғылыми идея ұсыныңдар: мәселе, шешім, қажетті ресурстар (5-7 сөйлем).",
       "body_ru": "Предложите научную идею, которая улучшит школу: проблема, решение, необходимые ресурсы (5-7 предложений).",
       "body_en": "Propose a scientific idea that improves your school: problem, solution, resources needed (5-7 sentences)."
@@ -105,12 +23,22 @@
     {
       "order": 3,
       "max_points": 15,
-      "title_kk": "3-тапсырма: Тәжірибе видеосы",
-      "title_ru": "Задание 3: Видео эксперимента",
-      "title_en": "Task 3: Experiment video",
+      "title_kk": "3-кезең: «Engineering and Technology»",
+      "title_ru": "Раунд 3: «Engineering and Technology»",
+      "title_en": "Round 3: «Engineering and Technology»",
       "body_kk": "Қарапайым қауіпсіз тәжірибе жасап, 60 секундтық видео жүктеңдер және нәтижесін түсіндіріңдер.",
       "body_ru": "Проведите простой безопасный эксперимент, загрузите видео до 60 секунд и объясните результат.",
       "body_en": "Perform a simple safe experiment, upload a video up to 60 seconds and explain the result."
+    },
+    {
+      "order": 4,
+      "max_points": 10,
+      "title_kk": "4-кезең: «ТИК-ТОК»",
+      "title_ru": "Раунд 4: «ТИК-ТОК»",
+      "title_en": "Round 4: «TIK-TOK»",
+      "body_kk": "Кейс-тапсырма\n\nЖағдаят:\nСіз – жас мұғалімсіз. Сабаққа кірсеңіз, оқушылар TikTok-тағы жаңа трендті түсіріп жатыр. Олар сізге назар аудармайды.\n\nТапсырма:\nОқушылардың қызығушылығын пайдаланып, трендті сабақпен байланыстырыңыз. Осы сәтті көрсететін қысқа TikTok-бейнеролик түсіріңіз.",
+      "body_ru": "Кейс-задание\n\nСитуация:\nВы — молодой учитель. Когда вы заходите в класс, ученики снимают новый тренд для TikTok. Они не обращают на вас внимания.\n\nЗадание:\nИспользуя интерес учеников, свяжите тренд с уроком. Снимите короткое видео для TikTok, которое показывает этот момент.",
+      "body_en": "Case task\n\nSituation:\nYou are a young teacher. When you walk into the classroom, the students are filming a new TikTok trend. They do not pay any attention to you.\n\nTask:\nUse the students' interest to connect the trend with the lesson. Film a short TikTok video that shows this moment."
     }
   ]
 }

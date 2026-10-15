@@ -23,6 +23,8 @@ QUIZ_PHASES = (PHASE_IDLE, PHASE_QUESTION, PHASE_STANDINGS, PHASE_FINISHED)
 # Фазы задания с таймером (№2, №3 и новые): час на работу, затем голосование.
 TIMED_TASK_MIN_ORDER = 2
 TASK3_ORDER = 3
+# Лайки за ответы команд — только у заданий №3 и выше (раунды 1–2 без голосования).
+LIKES_MIN_ORDER = 3
 PHASE_T3_IDLE = "idle"
 PHASE_T3_RUNNING = "running"
 PHASE_T3_VOTING = "voting"
@@ -136,8 +138,6 @@ class User(db.Model):
 
     team = db.relationship("Team", back_populates="users")
     tokens = db.relationship("AuthToken", back_populates="user", cascade="all, delete-orphan")
-    vote = db.relationship("Vote", back_populates="user", uselist=False,
-                           cascade="all, delete-orphan")
     project_votes = db.relationship("ProjectVote", back_populates="user",
                                    cascade="all, delete-orphan")
 
@@ -290,56 +290,42 @@ class Attachment(db.Model):
         }
 
 
-class Section(db.Model):
-    __tablename__ = "sections"
+class RoomCard(db.Model):
+    """Карточка кабинета: лидер команды переворачивает её и узнаёт свой кабинет.
+
+    Одну карточку может занять только одна команда, и у команды только одна карточка.
+    """
+
+    __tablename__ = "room_cards"
 
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(40), unique=True, nullable=False)
-    icon = db.Column(db.String(8), default="🔬")
-    name_kk = db.Column(db.String(160), default="")
-    name_ru = db.Column(db.String(160), default="")
-    name_en = db.Column(db.String(160), default="")
-    desc_kk = db.Column(db.Text, default="")
-    desc_ru = db.Column(db.Text, default="")
-    desc_en = db.Column(db.Text, default="")
-    order = db.Column(db.Integer, default=0)
-    is_open = db.Column(db.Boolean, default=True, nullable=False)
+    number = db.Column(db.Integer, unique=True, nullable=False)
+    room = db.Column(db.String(20), nullable=False)
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id"), unique=True, nullable=True)
+    picked_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    picked_at = db.Column(db.DateTime, nullable=True)
 
-    votes = db.relationship("Vote", back_populates="section",
-                            cascade="all, delete-orphan", lazy="selectin")
+    team = db.relationship("Team")
+    picked_by = db.relationship("User")
 
-    def to_dict(self, lang: str = "ru") -> dict:
+    @property
+    def is_taken(self) -> bool:
+        return self.team_id is not None
+
+    def to_dict(self, viewer=None) -> dict:
+        """Кабинет показываем только выбравшей команде и администраторам."""
+        mine = bool(viewer and self.team_id and viewer.team_id == self.team_id)
+        show_room = mine or bool(viewer and viewer.role == ROLE_ADMIN)
         return {
-            "id": self.id,
-            "code": self.code,
-            "icon": self.icon,
-            "name": _pick(self, "name", lang),
-            "description": _pick(self, "desc", lang),
-            "is_open": self.is_open,
-            "votes": len(self.votes),
-        }
-
-
-class Vote(db.Model):
-    __tablename__ = "votes"
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), unique=True, nullable=False)
-    section_id = db.Column(db.Integer, db.ForeignKey("sections.id"), nullable=False, index=True)
-    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
-
-    user = db.relationship("User", back_populates="vote")
-    section = db.relationship("Section", back_populates="votes")
-
-    def to_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "user_login": self.user.login if self.user else "",
-            "user_role": self.user.role if self.user else "",
-            "team_name": self.user.team.name if self.user and self.user.team else "",
-            "section_id": self.section_id,
-            "updated_at": self.updated_at.isoformat(),
+            "number": self.number,
+            "taken": self.is_taken,
+            "team_id": self.team_id,
+            "team_number": self.team.number if self.team else None,
+            "team_name": self.team.name if self.team else "",
+            "is_mine": mine,
+            "room": self.room if show_room else "",
+            "picked_by": self.picked_by.login if (self.picked_by and show_room) else "",
+            "picked_at": self.picked_at.isoformat() if self.picked_at else None,
         }
 
 
@@ -369,12 +355,23 @@ class TaskRound(db.Model):
         return self.phase == PHASE_T3_RUNNING
 
     @property
+    def likes_enabled(self) -> bool:
+        """Лайки включены только для заданий №3 и выше."""
+        order = self.task.order if self.task is not None else self.task_order
+        return (order or 0) >= LIKES_MIN_ORDER
+
+    @property
     def projects_visible(self) -> bool:
-        return self.phase in (PHASE_T3_VOTING, PHASE_T3_CLOSED)
+        return self.likes_enabled and self.phase in (PHASE_T3_VOTING, PHASE_T3_CLOSED)
 
     @property
     def can_like(self) -> bool:
-        return self.phase == PHASE_T3_VOTING
+        return self.likes_enabled and self.phase == PHASE_T3_VOTING
+
+    @property
+    def after_work_phase(self) -> str:
+        """Фаза после окончания времени: голосование или сразу завершено."""
+        return PHASE_T3_VOTING if self.likes_enabled else PHASE_T3_CLOSED
 
     @property
     def remaining_seconds(self) -> int | None:
@@ -401,6 +398,7 @@ class TaskRound(db.Model):
             "can_submit": self.can_submit,
             "projects_visible": self.projects_visible,
             "can_like": self.can_like,
+            "likes_enabled": self.likes_enabled,
         }
 
 
@@ -597,7 +595,7 @@ class QuizAnswer(db.Model):
     team = db.relationship("Team", back_populates="quiz_answers")
     user = db.relationship("User")
 
-    __table_args__ = (UniqueConstraint("question_id", "team_id", name="uq_answer_question_team"),)
+    __table_args__ = (UniqueConstraint("question_id", "user_id", name="uq_answer_question_user"),)
 
     def to_dict(self) -> dict:
         return {
@@ -691,6 +689,28 @@ class TeamMessage(db.Model):
             "body": self.body,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class AppSetting(db.Model):
+    """Простые настройки площадки «ключ → значение» (например, видимость карточек кабинетов)."""
+
+    __tablename__ = "app_settings"
+
+    key = db.Column(db.String(60), primary_key=True)
+    value = db.Column(db.String(200), default="", nullable=False)
+
+
+def get_setting(key: str, default: str = "") -> str:
+    row = db.session.get(AppSetting, key)
+    return row.value if row is not None else default
+
+
+def set_setting(key: str, value: str) -> None:
+    row = db.session.get(AppSetting, key)
+    if row is None:
+        db.session.add(AppSetting(key=key, value=value))
+    else:
+        row.value = value
 
 
 class StateVersion(db.Model):

@@ -17,14 +17,13 @@ from ..models import (
     Question,
     Quiz,
     QuizAnswer,
+    RoomCard,
     ScoreAdjustment,
-    Section,
     Submission,
     Task,
     TaskRound,
     Team,
     User,
-    Vote,
     bump,
     utcnow,
 )
@@ -65,7 +64,7 @@ def overview():
             "tasks": db.session.query(Task).count(),
             "submissions": db.session.query(Submission).count(),
             "attachments": db.session.query(Attachment).count(),
-            "votes": db.session.query(Vote).count(),
+            "votes": db.session.query(RoomCard).filter(RoomCard.team_id.isnot(None)).count(),
             "quiz_answers": db.session.query(QuizAnswer).count(),
         },
         quiz=quiz.to_dict(lang) if quiz else None,
@@ -743,36 +742,6 @@ def delete_question_image(question_id: int):
     bump("quiz")
     db.session.commit()
     return json_ok(question=question.to_admin_dict())
-
-
-# --------------------------------------------------------------------------- #
-# Секции
-# --------------------------------------------------------------------------- #
-@bp.patch("/sections/<int:section_id>")
-@admin_only
-def update_section(section_id: int):
-    section = db.session.get(Section, section_id)
-    if section is None:
-        return json_err("not_found", "Секция не найдена", 404)
-    data = request.get_json(silent=True) or {}
-    if "is_open" in data:
-        section.is_open = bool(data["is_open"])
-    for prefix in ("name", "desc"):
-        if any(f"{prefix}_{code}" in data for code in ("kk", "ru", "en")):
-            for field, value in localized_payload(prefix, data).items():
-                setattr(section, field, value)
-    bump("votes")
-    db.session.commit()
-    return json_ok(section=section.to_dict(current_lang()))
-
-
-@bp.post("/votes/reset")
-@admin_only
-def reset_votes():
-    db.session.query(Vote).delete()
-    bump("votes")
-    db.session.commit()
-    return json_ok()
 
 
 # --------------------------------------------------------------------------- #
