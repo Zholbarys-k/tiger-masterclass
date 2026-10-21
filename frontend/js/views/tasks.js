@@ -15,7 +15,6 @@ import {
   notify,
 } from "../ui.js";
 
-const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const MAX_FILES = 5;
 
 const pending = new Map();   // taskId -> File[]
@@ -180,10 +179,6 @@ function collectFiles(taskId, fileList, container) {
     const isMedia = file.type.startsWith("image/") || file.type.startsWith("video/");
     if (!isMedia) {
       notify.err(`${file.name}: ${t("tasks.file_bad_type")}`);
-      continue;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      notify.err(`${file.name}: ${t("tasks.file_too_big")}`);
       continue;
     }
     if (accepted.length >= MAX_FILES) {

@@ -47,8 +47,9 @@ class Config:
     AUTO_SEED = os.environ.get("TIGER_AUTO_SEED", "1") != "0"
 
     # --- Загрузка файлов ---
-    MAX_FILE_SIZE = 15 * 1024 * 1024          # 15 МБ на файл
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024     # запас на multipart-обвязку
+    MAX_FILE_SIZE = 0                         # ответы на задания: без ограничения размера (0 = нет лимита)
+    MAX_IMAGE_SIZE = 15 * 1024 * 1024         # фото к заданиям/вопросам (админ): 15 МБ
+    MAX_CONTENT_LENGTH = None                 # без лимита на размер запроса
     MAX_FILES_PER_SUBMISSION = 5
     ALLOWED_IMAGE_EXT = {"jpg", "jpeg", "png", "gif", "webp", "heic", "bmp"}
     ALLOWED_VIDEO_EXT = {"mp4", "mov", "webm", "avi", "mkv", "m4v", "3gp"}

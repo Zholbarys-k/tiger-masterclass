@@ -38,8 +38,11 @@ def file_ext(filename: str) -> str:
     return Path(filename or "").suffix.lower().lstrip(".")
 
 
-def validate_file(storage: FileStorage) -> tuple[bool, str]:
-    """Проверить MIME-тип, расширение и размер файла (до 15 МБ)."""
+def validate_file(storage: FileStorage, max_size: int | None = None) -> tuple[bool, str]:
+    """Проверить MIME-тип, расширение и размер файла.
+
+    max_size=None — берётся MAX_FILE_SIZE из конфига; 0 — без ограничения.
+    """
     cfg = current_app.config
     name = storage.filename or ""
     if not name:
@@ -60,9 +63,9 @@ def validate_file(storage: FileStorage) -> tuple[bool, str]:
     storage.stream.seek(0)
     if size <= 0:
         return False, "Пустой файл"
-    if size > cfg["MAX_FILE_SIZE"]:
-        limit_mb = cfg["MAX_FILE_SIZE"] // (1024 * 1024)
-        return False, f"Файл больше {limit_mb} МБ"
+    limit = cfg["MAX_FILE_SIZE"] if max_size is None else max_size
+    if limit and size > limit:
+        return False, f"Файл больше {limit // (1024 * 1024)} МБ"
     return True, ""
 
 
@@ -92,7 +95,7 @@ MEDIA_FOLDER = "media"
 
 def validate_image(storage: FileStorage) -> tuple[bool, str]:
     """Проверить, что файл — изображение до 15 МБ (для фото к заданиям и вопросам)."""
-    valid, message = validate_file(storage)
+    valid, message = validate_file(storage, current_app.config["MAX_IMAGE_SIZE"])
     if not valid:
         return valid, message
     mime = (storage.mimetype or "").lower()

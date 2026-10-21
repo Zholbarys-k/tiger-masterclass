@@ -198,7 +198,7 @@ def _register_frontend(app: Flask) -> None:
 def _register_errors(app: Flask) -> None:
     @app.errorhandler(413)
     def too_large(_error):
-        limit = app.config["MAX_FILE_SIZE"] // (1024 * 1024)
+        limit = (app.config["MAX_IMAGE_SIZE"] or 0) // (1024 * 1024)
         return jsonify({
             "ok": False,
             "error": "file_too_large",

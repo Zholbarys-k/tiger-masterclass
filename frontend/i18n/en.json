@@ -68,7 +68,7 @@
   "tasks.your_answer": "Team answer",
   "tasks.answer_ph": "Write your team's final answer...",
   "tasks.attach": "Attach a photo or video",
-  "tasks.attach_hint": "Up to 15 MB per file, images and videos only",
+  "tasks.attach_hint": "Any size, images and videos only",
   "tasks.submit": "Send answer",
   "tasks.update": "Update answer",
   "tasks.sending": "Sending...",

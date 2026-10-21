@@ -145,10 +145,10 @@ def main() -> None:
     status, denied = call("POST", f"/api/tasks/{task_id}/submit", member_token, body=body, content_type=ctype)
     check("участник НЕ может отправлять ответ (403)", status == 403)
 
-    big = b"\x00" * (15 * 1024 * 1024 + 2048)
+    big = b"\x00" * (16 * 1024 * 1024 + 2048)
     body_big, ctype_big = multipart({"text": "big"}, [("files", "big.mp4", big, "video/mp4")])
     status, _ = call("POST", f"/api/tasks/{task_id}/submit", leader_token, body=body_big, content_type=ctype_big)
-    check("файл больше 15 МБ отклонён", status in (400, 413))
+    check("файл больше 15 МБ принят (лимита на ответы нет)", status == 200)
 
     body_bad, ctype_bad = multipart({"text": "bad"}, [("files", "doc.pdf", b"%PDF-1.4", "application/pdf")])
     status, _ = call("POST", f"/api/tasks/{task_id}/submit", leader_token, body=body_bad, content_type=ctype_bad)
